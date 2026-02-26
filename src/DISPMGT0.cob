@@ -235,9 +235,9 @@ DO-RESOLVE-DISPUTE.
     MOVE WS-TODAY-DATE TO DSP-RESOLUTION-DATE
 
     *> Reg E enforcement: if 10 business-day deadline has passed
-    *> and no provisional credit was issued (status still "P"),
+    *> and no provisional credit was issued (status "P" or "I"),
     *> require PROV before RSLV. 12 CFR 1005.11(c)(1).
-    IF DSP-STATUS = "P"
+    IF (DSP-STATUS = "P" OR DSP-STATUS = "I")
         AND DSP-DEADLINE-DATE > 0
         AND WS-TODAY-DATE > DSP-DEADLINE-DATE
         MOVE "E0100" TO LS-DSP-RESULT-CODE

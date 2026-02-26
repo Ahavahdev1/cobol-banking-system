@@ -64,6 +64,17 @@ ODMGMT0-MAIN.
         MOVE "Account is escheated" TO LS-OD-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-OD-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-GARNISHMENT = "Y"
+        MOVE "E0045" TO LS-OD-RESULT-CODE
+        MOVE "Account under garnishment - OD blocked"
+            TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Determine effective balance
     MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL

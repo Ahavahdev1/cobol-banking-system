@@ -150,6 +150,13 @@ MAIN-PROCESS.
 *> CHECK-BATCH-TOTALS - Validate batch control totals
 *> ---------------------------------------------------------------
 CHECK-BATCH-TOTALS.
+    *> Zero batch count is invalid — reject malformed ACH batch
+    IF LS-ACH-BATCH-COUNT = 0
+        MOVE "E0094" TO LS-ACH-RESULT-CODE
+        MOVE "INVALID BATCH: ENTRY COUNT IS ZERO"
+            TO LS-ACH-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
     *> Single-entry batch: entry amount must equal batch total
     IF LS-ACH-BATCH-COUNT = 1
         IF WS-IS-CREDIT = "Y"

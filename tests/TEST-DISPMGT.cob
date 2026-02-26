@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (24 tests)
+*> Tests: File, provisional credit, resolve, inquiry (25 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-022
     PERFORM TEST-DP-023
     PERFORM TEST-DP-024
+    PERFORM TEST-DP-025
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -975,4 +976,40 @@ TEST-DP-024.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-025: RSLV past deadline with "I" status -> E0100
+*> Investigating disputes also need PROV before RSLV past deadline
+*> 12 CFR 1005.11(c)(1) applies to all non-credited disputes
+*> ---------------------------------------------------------------
+TEST-DP-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-025: RSLV past deadline status=I -> E0100"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    *> Set up dispute in "I" status with a past deadline
+    MOVE 3 TO DSP-DISPUTE-ID
+    MOVE "I" TO DSP-STATUS
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 300.00 TO DSP-TXN-AMOUNT
+    MOVE 20260101 TO DSP-DISPUTE-DATE
+    MOVE 20260115 TO DSP-DEADLINE-DATE
+    MOVE "AP" TO DSP-RESOLUTION-CODE
+    MOVE 100000000003 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0100"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0100"
     END-IF.

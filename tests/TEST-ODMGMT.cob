@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ODMGMT.
 *> ================================================================
 *> TEST-ODMGMT - Test suite for ODMGMT0 Overdraft Management
 *> Tests: Reg E opt-in, OD limits, protection transfers, NSF caps,
-*>        de minimis, acct type/status (19 tests OD-001 to OD-019)
+*>        de minimis, acct type/status (21 tests OD-001 to OD-021)
 *> ================================================================
 
 DATA DIVISION.
@@ -55,6 +55,8 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-017
     PERFORM TEST-OD-018
     PERFORM TEST-OD-019
+    PERFORM TEST-OD-020
+    PERFORM TEST-OD-021
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -821,4 +823,74 @@ TEST-OD-019.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-020: Deceased account -> E0036
+*> Overdraft should not be approved for deceased account holders
+*> ---------------------------------------------------------------
+TEST-OD-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-020: Deceased acct -> E0036" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE "Y" TO ACCT-DECEASED
+    MOVE 150.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0036"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+            " expected=E0036"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-021: Garnished account -> E0045
+*> Overdraft extends credit/outflows blocked by court order
+*> ---------------------------------------------------------------
+TEST-OD-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-021: Garnished acct -> E0045" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE "Y" TO ACCT-GARNISHMENT
+    MOVE 150.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0045"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+            " expected=E0045"
     END-IF.
