@@ -385,11 +385,12 @@ TEST-IC-009.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> IC-010: Payment rounding $41.095890 -> $41.10 (half-up 2dp)
+*> IC-010: Payment includes today's interest
+*> $10K@5% A/365: daily=1.369863, accrued+daily=42.465753->$42.47
 *> ---------------------------------------------------------------
 TEST-IC-010.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "IC-010: Payment round $41.095890->$41.10"
+    MOVE "IC-010: Payment round $41.095890->$42.47"
         TO WS-TEST-NAME
     INITIALIZE ACCT-RECORD
     INITIALIZE WS-INT-RESULT
@@ -406,7 +407,7 @@ TEST-IC-010.
     *> Set next pay date to today to trigger payment
     MOVE 20260215 TO ACCT-INT-NEXT-PAY-DATE
     MOVE 20260215 TO WS-CALC-DATE
-    MOVE 41.10 TO WS-EXPECTED-PMT
+    MOVE 42.47 TO WS-EXPECTED-PMT
     CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
     IF WS-INT-RESULT-CODE = "E0000"
         IF WS-PAYMENT-DUE = "Y"

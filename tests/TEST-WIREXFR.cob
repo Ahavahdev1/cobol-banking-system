@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, RVRS, INQY functions (22 tests)
+*> Tests: SEND, RECV, RVRS, INQY functions (25 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,9 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-020
     PERFORM TEST-WR-021
     PERFORM TEST-WR-022
+    PERFORM TEST-WR-023
+    PERFORM TEST-WR-024
+    PERFORM TEST-WR-025
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -468,7 +471,7 @@ TEST-WR-009.
         OF WS-WIRE-RECORD
     MOVE "O" TO WIRE-TYPE OF WS-WIRE-RECORD
     MOVE 2000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
-    MOVE "PR" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE "CP" TO WIRE-STATUS OF WS-WIRE-RECORD
     *> Account that had sent the wire (balance was debited)
     MOVE 100000000009 TO ACCT-NUMBER OF WS-ACCT-RECORD
     MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
@@ -1061,4 +1064,131 @@ TEST-WR-022.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0011"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-023: RVRS pending wire (PE) -> E0033
+*>         Only completed wires can be reversed
+*> ---------------------------------------------------------------
+TEST-WR-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-023: RVRS pending wire -> E0033"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "RVRS" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000023" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "O" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "PE" TO WIRE-STATUS OF WS-WIRE-RECORD
+    *> Active account
+    MOVE 100000000023 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0033"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0033"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-024: RVRS already reversed wire (RV) -> E0033
+*>         Cannot reverse a wire that has already been reversed
+*> ---------------------------------------------------------------
+TEST-WR-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-024: RVRS already reversed -> E0033"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "RVRS" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000024" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "I" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 2000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "RV" TO WIRE-STATUS OF WS-WIRE-RECORD
+    *> Active account
+    MOVE 100000000024 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0033"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0033"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-025: RECV incoming wire with OFAC match -> E0025
+*>         Originator name matches OFAC screening
+*> ---------------------------------------------------------------
+TEST-WR-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-025: RECV OFAC match originator -> E0025"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "RECV" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000025" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "I" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE "N" TO WIRE-PRIORITY OF WS-WIRE-RECORD
+    MOVE 5000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "OFAC-TEST-MATCH" TO WIRE-ORIG-NAME
+        OF WS-WIRE-RECORD
+    MOVE "JANE SMITH" TO WIRE-BENE-NAME OF WS-WIRE-RECORD
+    MOVE "INCOMING PAYMENT" TO WIRE-PURPOSE OF WS-WIRE-RECORD
+    *> Active account with sufficient balance
+    MOVE 100000000025 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0025"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0025"
     END-IF.

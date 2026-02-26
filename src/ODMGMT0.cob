@@ -40,6 +40,26 @@ ODMGMT0-MAIN.
     MOVE ZEROS TO LS-OD-TRANSFER-AMT
     MOVE ACCT-NSF-COUNT-TODAY TO LS-OD-NEW-NSF-COUNT
 
+    *> Validate account type: overdraft applies to deposit accounts only
+    IF ACCT-TYPE NOT = "D"
+        MOVE "E0018" TO LS-OD-RESULT-CODE
+        MOVE "Overdraft applies to deposit accounts only"
+            TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Validate account status: reject closed or frozen accounts
+    IF ACCT-STATUS = "C"
+        MOVE "E0011" TO LS-OD-RESULT-CODE
+        MOVE "Account is closed" TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-OD-RESULT-CODE
+        MOVE "Account is frozen" TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Determine effective balance
     MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL
 

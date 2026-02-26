@@ -8,8 +8,7 @@ PROGRAM-ID. TXNPOST0.
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 01  WS-DEPOSIT-GL            PIC 9(10).
-*> BSA/AML CTR threshold - must match WS-CTR-THRESHOLD in CPYCONST
-01  WS-LOCAL-CTR-THRESHOLD   PIC S9(13)V99 VALUE +10000.00.
+COPY CPYCONST.
 
 LINKAGE SECTION.
 COPY CPYTXN.
@@ -29,6 +28,7 @@ PROCEDURE DIVISION USING TXN-RECORD
                          LS-TXN-RESULT.
 MAIN-LOGIC.
     PERFORM VALIDATE-AMOUNT
+    PERFORM VALIDATE-DR-CR
     PERFORM VALIDATE-ACCOUNT-STATUS
     *> For reversals, swap the debit/credit direction
     IF TXN-TYPE = "REV"
@@ -59,6 +59,17 @@ VALIDATE-AMOUNT.
     IF TXN-AMOUNT < ZERO
         MOVE "E0032" TO LS-TXN-RESULT-CODE
         MOVE "Transaction amount is negative" TO LS-TXN-RESULT-MSG
+        GOBACK
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Validate debit/credit indicator
+*> ---------------------------------------------------------------
+VALIDATE-DR-CR.
+    IF TXN-DR-CR NOT = "D" AND TXN-DR-CR NOT = "C"
+        MOVE "E0037" TO LS-TXN-RESULT-CODE
+        MOVE "Invalid debit/credit indicator"
+            TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF.
 
@@ -260,7 +271,7 @@ DETERMINE-DEPOSIT-GL.
 *> Check if cash amount triggers CTR reporting
 *> ---------------------------------------------------------------
 CHECK-CTR.
-    IF TXN-CASH-AMOUNT >= WS-LOCAL-CTR-THRESHOLD
+    IF TXN-CASH-AMOUNT >= WS-CTR-THRESHOLD
         MOVE "Y" TO TXN-CTR-REPORTABLE
     ELSE
         MOVE "N" TO TXN-CTR-REPORTABLE

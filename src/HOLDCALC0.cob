@@ -100,7 +100,7 @@ MAIN-LOGIC.
 
     *> Extend hold period for exception conditions (Reg CC 229.13)
     IF WS-EXCEPTION-FLAG = "Y"
-        MOVE WS-REGCC-EXCEPTION-DAYS TO WS-HOLD-DAYS
+        ADD WS-REGCC-EXCEPTION-DAYS TO WS-HOLD-DAYS
         PERFORM COMPUTE-RELEASE-DATE
     END-IF
 

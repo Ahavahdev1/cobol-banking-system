@@ -119,10 +119,10 @@ MAIN-LOGIC.
     END-IF
 
     IF WS-PAYMENT-FLAG = "Y"
-        *> Payment due: payment = round(current accrued) to 2dp
+        *> Payment due: payment = round(current accrued + today) to 2dp
         MOVE "Y" TO LS-PAYMENT-DUE
         COMPUTE LS-PAYMENT-AMT ROUNDED =
-            ACCT-ACCRUED-INT
+            ACCT-ACCRUED-INT + WS-DAILY-INTEREST
             ON SIZE ERROR
                 MOVE "E0040" TO LS-INT-RESULT-CODE
                 MOVE "Arithmetic overflow on payment amount"

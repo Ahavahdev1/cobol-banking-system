@@ -173,6 +173,22 @@ PROCESS-RECV.
         GOBACK
     END-IF
 
+    *> OFAC originator screening (P1 regulatory requirement)
+    INITIALIZE OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE WIRE-ORIG-NAME TO OFAC-CHECK-NAME
+    MOVE "O" TO OFAC-CHECK-TYPE
+    MOVE "CHKN" TO WS-OFAC-FUNCTION
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        MOVE "E0025" TO LS-WIRE-RESULT-CODE
+        MOVE "OFAC match on originator"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Credit account
     ADD WIRE-AMOUNT TO ACCT-LEDGER-BAL
         ON SIZE ERROR
@@ -205,6 +221,36 @@ PROCESS-REVERSE.
     IF WIRE-REFERENCE-NUM = SPACES
         MOVE "E0099" TO LS-WIRE-RESULT-CODE
         MOVE "Wire: invalid wire reference" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Only completed wires can be reversed
+    IF WIRE-STATUS NOT = "CP"
+        MOVE "E0033" TO LS-WIRE-RESULT-CODE
+        MOVE "Only completed wires can be reversed"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Validate account is active (not closed or frozen)
+    IF ACCT-STATUS = "C"
+        MOVE "E0011" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is closed" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is frozen" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-WIRE-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-LEGAL-HOLD = "Y"
+        MOVE "E0035" TO LS-WIRE-RESULT-CODE
+        MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
 

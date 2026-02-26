@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (34 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (35 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -65,6 +65,7 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-032
     PERFORM TEST-TP-033
     PERFORM TEST-TP-034
+    PERFORM TEST-TP-035
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1178,4 +1179,29 @@ TEST-TP-034.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-035: Invalid DR/CR indicator "X" -> E0037
+*>         TXN-DR-CR must be "D" or "C"
+*> ---------------------------------------------------------------
+TEST-TP-035.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-035: Invalid DR/CR=E0037" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 500.00 TO TXN-CASH-AMOUNT
+    MOVE "X" TO TXN-DR-CR
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0037"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0037 actual=" WS-TXN-RESULT-CODE
     END-IF.

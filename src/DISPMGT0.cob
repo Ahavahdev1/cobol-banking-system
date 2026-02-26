@@ -177,6 +177,15 @@ DO-RESOLVE-DISPUTE.
         GOBACK
     END-IF
 
+    *> Validate dispute is in a resolvable status
+    IF DSP-STATUS NOT = "P" AND DSP-STATUS NOT = "I"
+        AND DSP-STATUS NOT = "C"
+        MOVE "E0086" TO LS-DSP-RESULT-CODE
+        MOVE "Dispute not in resolvable status"
+            TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Set resolution date
     MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE-TIME
     STRING WS-CDT-YEAR WS-CDT-MONTH WS-CDT-DAY

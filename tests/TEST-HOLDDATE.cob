@@ -165,12 +165,13 @@ TEST-HD-003.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> HD-004: Treasury check Wed 2/18 $10K, 7 biz days -> Fri 2/27
-*>         (above $5,525 triggers exception hold per Reg CC 229.13)
+*> HD-004: Treasury check Wed 2/18 $10K, 2+7=9 biz days -> Tue 3/3
+*>         (above $5,525 triggers exception extending base hold
+*>          per Reg CC 229.13: base 2 + exception 7 = 9 biz days)
 *> ---------------------------------------------------------------
 TEST-HD-004.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "HD-004: Treasury chk Wed $10K exception +7 = Fri"
+    MOVE "HD-004: Treasury chk Wed $10K exception 2+7 = Tue"
         TO WS-TEST-NAME
     INITIALIZE WS-HOLD-REQUEST
     INITIALIZE HOLD-RECORD
@@ -182,7 +183,7 @@ TEST-HD-004.
     MOVE 20200101 TO WS-HR-ACCT-OPEN-DATE
     MOVE "N" TO WS-HR-IS-REDEPOSIT
     MOVE "N" TO WS-HR-REPEATED-OD
-    MOVE 20260227 TO WS-EXPECTED-RELEASE
+    MOVE 20260303 TO WS-EXPECTED-RELEASE
     CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
                            WS-HOLD-RESULT
     IF WS-HOLD-RESULT-CODE = "E0000"

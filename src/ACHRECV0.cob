@@ -88,6 +88,14 @@ MAIN-PROCESS.
         MOVE "Y" TO WS-IS-DEBIT
     END-IF
 
+    *> Reject unsupported transaction codes
+    IF WS-IS-CREDIT = "N" AND WS-IS-DEBIT = "N"
+        MOVE "E0037" TO LS-ACH-RESULT-CODE
+        MOVE "UNSUPPORTED ACH TRANSACTION CODE"
+            TO LS-ACH-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Step 1: Validate ACH amount
     PERFORM VALIDATE-AMOUNT
     IF LS-ACH-RESULT-CODE NOT = "E0000"

@@ -89,6 +89,20 @@ OPEN-ACCOUNT.
 *> CLOSE-ACCOUNT - Close an existing account
 *> ---------------------------------------------------------------
 CLOSE-ACCOUNT.
+    IF ACCT-STATUS NOT = "A"
+        MOVE "E0011" TO LS-ACCT-RESULT-CODE
+        MOVE "Only active accounts can be closed"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
+    IF ACCT-LEGAL-HOLD = "Y"
+        MOVE "E0035" TO LS-ACCT-RESULT-CODE
+        MOVE "Cannot close account under legal hold"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     IF ACCT-LEDGER-BAL NOT = 0
         MOVE "E0016" TO LS-ACCT-RESULT-CODE
         MOVE "Account has balance" TO LS-ACCT-RESULT-MSG

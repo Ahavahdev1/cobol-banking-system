@@ -156,35 +156,10 @@ POST-GL-ENTRY.
                 END-ADD
             END-IF
         WHEN OTHER
-            *> Journal mode: track double-entry totals
-            ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-GL-RESULT-CODE
-                    MOVE "Arithmetic overflow on MTD accumulator"
-                        TO LS-GL-RESULT-MSG
-                    GOBACK
-            END-ADD
-            ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-GL-RESULT-CODE
-                    MOVE "Arithmetic overflow on MTD accumulator"
-                        TO LS-GL-RESULT-MSG
-                    GOBACK
-            END-ADD
-            ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-GL-RESULT-CODE
-                    MOVE "Arithmetic overflow on YTD accumulator"
-                        TO LS-GL-RESULT-MSG
-                    GOBACK
-            END-ADD
-            ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-GL-RESULT-CODE
-                    MOVE "Arithmetic overflow on YTD accumulator"
-                        TO LS-GL-RESULT-MSG
-                    GOBACK
-            END-ADD
+            MOVE "E0063" TO LS-GL-RESULT-CODE
+            MOVE "Invalid GL normal balance indicator"
+                TO LS-GL-RESULT-MSG
+            GOBACK
     END-EVALUATE
 
     *> Map GL account to Call Report line code (12 CFR 304)

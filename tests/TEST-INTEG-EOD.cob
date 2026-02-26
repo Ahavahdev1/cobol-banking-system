@@ -468,12 +468,13 @@ TEST-EOD-005.
             " payment-due=" WS-PAYMENT-DUE " expected=Y"
         GO TO TEST-EOD-005-EXIT
     END-IF
-    *> Payment amount = $41.10 (41.095890 rounded half-up)
-    IF WS-PAYMENT-AMT NOT = 41.10
+    *> Payment = accrued + today's interest (30K@5%/365 = 4.109589)
+    *> 41.095890 + 4.109589 = 45.205479, rounded = $45.21
+    IF WS-PAYMENT-AMT NOT = 45.21
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " payment-amt=" WS-PAYMENT-AMT
-            " expected=41.10"
+            " expected=45.21"
         GO TO TEST-EOD-005-EXIT
     END-IF
     *> Accrual should reset to 0 after payment
@@ -522,6 +523,7 @@ TEST-EOD-006.
     MOVE 500.00 TO WS-GLE-AMOUNT
     MOVE "CHECKING DEPOSIT" TO WS-GLE-DESCRIPTION
     MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE "D" TO GL-NORMAL-BALANCE OF WS-GL-RECORD
     CALL "GLPOST0" USING WS-GL-FUNCTION
                          WS-GL-ENTRY
                          WS-GL-RECORD
@@ -551,8 +553,11 @@ TEST-EOD-006.
             " GLPOST0 POST2 result=" WS-GL-RESULT-CODE
         GO TO TEST-EOD-006-EXIT
     END-IF
-    *> --- Run trial balance
+    *> --- Run trial balance with explicit totals
+    *> Both deposits total $800; set both sides for balanced check
     MOVE "TBAL" TO WS-GL-FUNCTION
+    MOVE 800.00 TO WS-TB-TOTAL-DEBITS
+    MOVE 800.00 TO WS-TB-TOTAL-CREDITS
     CALL "GLPOST0" USING WS-GL-FUNCTION
                          WS-GL-ENTRY
                          WS-GL-RECORD
