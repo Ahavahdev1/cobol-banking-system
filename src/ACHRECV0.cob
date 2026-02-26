@@ -45,14 +45,14 @@ LINKAGE SECTION.
     *> 32 = Credit savings, 37 = Debit savings
     05  LS-ACH-ROUTING-NUM       PIC 9(9).
     05  LS-ACH-ACCT-NUMBER       PIC X(17).
-    05  LS-ACH-AMOUNT            PIC S9(10)V99.
+    05  LS-ACH-AMOUNT            PIC S9(13)V99.
     05  LS-ACH-INDIV-NAME        PIC X(22).
     05  LS-ACH-TRACE-NUMBER      PIC X(15).
     05  LS-ACH-ADDENDA-FLAG      PIC X(1).
     *> Batch control fields
     05  LS-ACH-BATCH-COUNT       PIC 9(6).
-    05  LS-ACH-BATCH-DR-TOTAL    PIC S9(12)V99.
-    05  LS-ACH-BATCH-CR-TOTAL    PIC S9(12)V99.
+    05  LS-ACH-BATCH-DR-TOTAL    PIC S9(13)V99.
+    05  LS-ACH-BATCH-CR-TOTAL    PIC S9(13)V99.
     05  LS-ACH-BATCH-HASH        PIC 9(10).
 COPY CPYACCT.
 01  LS-ACH-RETURN-INFO.

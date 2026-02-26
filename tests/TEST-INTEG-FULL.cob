@@ -4,7 +4,7 @@ PROGRAM-ID. TEST-INTEG-FULL.
 *> TEST-INTEG-FULL - Full end-to-end integration tests
 *> Exercises complete account lifecycle across multiple modules:
 *> TXNPOST0, INTCALC0, FEECALC0, ACHRECV0, WIREXFR0,
-*> HOLDCALC0, BSACTRO, OFACCHK0
+*> HOLDCALC0, BSACTRO, OFACCHK0, LOANPMT0, DISPMGT0, ODMGMT0
 *> ================================================================
 
 DATA DIVISION.
@@ -48,13 +48,13 @@ COPY CPYTXN REPLACING ==TXN-RECORD== BY ==WS-TXN-RECORD==.
     05  WS-ACH-TXN-CODE          PIC 9(2).
     05  WS-ACH-ROUTING-NUM       PIC 9(9).
     05  WS-ACH-ACCT-NUMBER       PIC X(17).
-    05  WS-ACH-AMOUNT            PIC S9(10)V99.
+    05  WS-ACH-AMOUNT            PIC S9(13)V99.
     05  WS-ACH-INDIV-NAME        PIC X(22).
     05  WS-ACH-TRACE-NUMBER      PIC X(15).
     05  WS-ACH-ADDENDA-FLAG      PIC X(1).
     05  WS-ACH-BATCH-COUNT       PIC 9(6).
-    05  WS-ACH-BATCH-DR-TOTAL    PIC S9(12)V99.
-    05  WS-ACH-BATCH-CR-TOTAL    PIC S9(12)V99.
+    05  WS-ACH-BATCH-DR-TOTAL    PIC S9(13)V99.
+    05  WS-ACH-BATCH-CR-TOTAL    PIC S9(13)V99.
     05  WS-ACH-BATCH-HASH        PIC 9(10).
 01  WS-ACH-RETURN-INFO.
     05  WS-ACH-RETURN-CODE       PIC X(3).
@@ -116,6 +116,38 @@ COPY CPYFEE REPLACING
     05  WS-FEE-WAIVED-FLAG        PIC X(1).
     05  WS-FEE-WAIVER-REASON      PIC X(2).
 
+*> --- Loan payment (LOANPMT0)
+01  WS-LOAN-FUNCTION              PIC X(4).
+01  WS-LOAN-PMT-AMT              PIC S9(13)V99.
+01  WS-LOAN-PMT-DATE             PIC 9(8).
+01  WS-LOAN-RESULT.
+    05  WS-LOAN-RESULT-CODE      PIC X(5).
+    05  WS-LOAN-RESULT-MSG       PIC X(50).
+    05  WS-LOAN-INT-PORTION      PIC S9(13)V99.
+    05  WS-LOAN-PRIN-PORTION     PIC S9(13)V99.
+    05  WS-LOAN-NEW-BALANCE      PIC S9(13)V99.
+
+*> --- Dispute management (DISPMGT0)
+01  WS-DSP-FUNCTION               PIC X(4).
+COPY CPYDSP REPLACING ==DISPUTE-RECORD== BY ==WS-DSP-RECORD==.
+01  WS-DSP-RESULT.
+    05  WS-DSP-RESULT-CODE       PIC X(5).
+    05  WS-DSP-RESULT-MSG        PIC X(50).
+
+*> --- Overdraft management (ODMGMT0)
+01  WS-OD-REQUEST.
+    05  WS-OD-TXN-AMOUNT         PIC S9(13)V99.
+    05  WS-OD-TXN-CHANNEL        PIC X(2).
+    05  WS-OD-TXN-TYPE           PIC X(3).
+    05  WS-OD-CURRENT-DATE       PIC 9(8).
+01  WS-OD-RESULT.
+    05  WS-OD-RESULT-CODE        PIC X(5).
+    05  WS-OD-RESULT-MSG         PIC X(50).
+    05  WS-OD-APPROVED           PIC X(1).
+    05  WS-OD-FEE-ASSESSED       PIC 9(5)V99.
+    05  WS-OD-TRANSFER-AMT       PIC S9(13)V99.
+    05  WS-OD-NEW-NSF-COUNT      PIC 9(3).
+
 *> --- Temporary work fields
 01  WS-EXPECTED-BAL               PIC S9(13)V99.
 01  WS-EXPECTED-AVAIL             PIC S9(13)V99.
@@ -138,6 +170,10 @@ MAIN-PROGRAM.
     PERFORM TEST-IE-F07 THRU TEST-IE-F07-EXIT
     PERFORM TEST-IE-F08 THRU TEST-IE-F08-EXIT
     PERFORM TEST-IE-F09 THRU TEST-IE-F09-EXIT
+    PERFORM TEST-IE-F10 THRU TEST-IE-F10-EXIT
+    PERFORM TEST-IE-F11 THRU TEST-IE-F11-EXIT
+    PERFORM TEST-IE-F12 THRU TEST-IE-F12-EXIT
+    PERFORM TEST-IE-F13 THRU TEST-IE-F13-EXIT
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1042,4 +1078,358 @@ TEST-IE-F09.
     ADD 1 TO WS-PASS-COUNT
     DISPLAY "  PASS: " WS-TEST-NAME.
 TEST-IE-F09-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> IE-F10: ACH credit to frozen account → R16 return
+*> Verifies ACHRECV0 blocks credits to frozen accounts, balance
+*> unchanged, proper NACHA return code set
+*> ---------------------------------------------------------------
+TEST-IE-F10.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IE-F10: ACH credit to frozen account -> R16"
+        TO WS-TEST-NAME
+
+    *> --- Initialize frozen checking account with $5000
+    INITIALIZE WS-ACCT-RECORD
+    MOVE 100000000010 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "F" TO ACCT-STATUS OF WS-ACCT-RECORD
+
+    *> --- Setup ACH credit $3000 (TXN code 22 = checking credit)
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 22 TO WS-ACH-TXN-CODE
+    MOVE 121000358 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000010     " TO WS-ACH-ACCT-NUMBER
+    MOVE 3000.00 TO WS-ACH-AMOUNT
+    MOVE "PAYROLL CORP" TO WS-ACH-INDIV-NAME
+    MOVE "000000012345678" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 0 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 3000.00 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 1000000 TO WS-ACH-BATCH-HASH
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+
+    *> Verify R16 return (frozen account)
+    IF WS-ACH-RETURN-FLAG NOT = "Y"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
+        GO TO TEST-IE-F10-EXIT
+    END-IF
+    IF WS-ACH-RETURN-CODE NOT = "R16"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-code=" WS-ACH-RETURN-CODE
+            " expected=R16"
+        GO TO TEST-IE-F10-EXIT
+    END-IF
+
+    *> Verify balance unchanged at $5000
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 5000.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " bal=" ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=5000.00 (unchanged)"
+        GO TO TEST-IE-F10-EXIT
+    END-IF
+
+    ADD 1 TO WS-PASS-COUNT
+    DISPLAY "  PASS: " WS-TEST-NAME.
+TEST-IE-F10-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> IE-F11: Loan payment → interest/principal split + balance update
+*> Init loan $10000 at 6%, accrued interest $50, pay $200
+*> Verify split, new balance, accrued zeroed after payment
+*> ---------------------------------------------------------------
+TEST-IE-F11.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IE-F11: Loan payment interest/principal split"
+        TO WS-TEST-NAME
+
+    *> --- Initialize loan account
+    INITIALIZE WS-ACCT-RECORD
+    MOVE 200000000011 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "LN01" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "L" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "PL" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-ORIGINAL-AMT OF WS-ACCT-RECORD
+    MOVE 200.00 TO ACCT-PAYMENT-AMT OF WS-ACCT-RECORD
+    MOVE 6.0000000 TO ACCT-INT-RATE OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS OF WS-ACCT-RECORD
+    MOVE 50.000000 TO ACCT-ACCRUED-INT OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-PAST-DUE-AMT OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-ESCROW-BAL OF WS-ACCT-RECORD
+    MOVE 36 TO ACCT-REMAINING-TERM OF WS-ACCT-RECORD
+    MOVE 20260315 TO ACCT-INT-NEXT-PAY-DATE OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+
+    *> --- Make loan payment $200
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 200.00 TO WS-LOAN-PMT-AMT
+    MOVE 20260315 TO WS-LOAN-PMT-DATE
+    INITIALIZE WS-LOAN-RESULT
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION
+                          WS-ACCT-RECORD
+                          WS-LOAN-PMT-AMT
+                          WS-LOAN-PMT-DATE
+                          WS-LOAN-RESULT
+
+    IF WS-LOAN-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-LOAN-RESULT-CODE
+            " msg=" WS-LOAN-RESULT-MSG
+        GO TO TEST-IE-F11-EXIT
+    END-IF
+
+    *> Interest portion = ROUND(accrued 50.00) = $50.00
+    *> Principal portion = $200 - $50 = $150
+    *> New balance = $10000 - $150 = $9850
+    IF WS-LOAN-INT-PORTION NOT = 50.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " int-portion=" WS-LOAN-INT-PORTION
+            " expected=50.00"
+        GO TO TEST-IE-F11-EXIT
+    END-IF
+    IF WS-LOAN-PRIN-PORTION NOT = 150.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " prin-portion=" WS-LOAN-PRIN-PORTION
+            " expected=150.00"
+        GO TO TEST-IE-F11-EXIT
+    END-IF
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 9850.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " balance=" ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=9850.00"
+        GO TO TEST-IE-F11-EXIT
+    END-IF
+
+    *> Remaining term decremented
+    IF ACCT-REMAINING-TERM OF WS-ACCT-RECORD NOT = 35
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " term=" ACCT-REMAINING-TERM OF WS-ACCT-RECORD
+            " expected=35"
+        GO TO TEST-IE-F11-EXIT
+    END-IF
+
+    ADD 1 TO WS-PASS-COUNT
+    DISPLAY "  PASS: " WS-TEST-NAME.
+TEST-IE-F11-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> IE-F12: Dispute lifecycle: FILE → PROV credit → RSLV approve
+*> File dispute $500, issue provisional credit (balance goes up),
+*> resolve approved (credit kept, status = R)
+*> ---------------------------------------------------------------
+TEST-IE-F12.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IE-F12: Dispute lifecycle FILE->PROV->RSLV"
+        TO WS-TEST-NAME
+
+    *> --- Initialize checking account at $1000
+    INITIALIZE WS-ACCT-RECORD
+    MOVE 300000000012 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 1000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 1000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+
+    *> --- Step 1: FILE dispute for $500 unauthorized charge
+    INITIALIZE WS-DSP-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 500.00 TO DSP-TXN-AMOUNT OF WS-DSP-RECORD
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE OF WS-DSP-RECORD
+    MOVE 300000000012 TO DSP-ACCT-NUMBER OF WS-DSP-RECORD
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION
+                          WS-DSP-RECORD
+                          WS-ACCT-RECORD
+                          WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " FILE result=" WS-DSP-RESULT-CODE
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+    IF DSP-STATUS OF WS-DSP-RECORD NOT = "P"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " FILE status=" DSP-STATUS OF WS-DSP-RECORD
+            " expected=P"
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+
+    *> --- Step 2: PROV provisional credit $500
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION
+                          WS-DSP-RECORD
+                          WS-ACCT-RECORD
+                          WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " PROV result=" WS-DSP-RESULT-CODE
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+
+    *> Verify balance increased by $500 (1000 + 500 = 1500)
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 1500.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " post-PROV ledger="
+            ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=1500.00"
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+    IF DSP-STATUS OF WS-DSP-RECORD NOT = "C"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " PROV status=" DSP-STATUS OF WS-DSP-RECORD
+            " expected=C"
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+
+    *> --- Step 3: RSLV resolve approved
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "AP" TO DSP-RESOLUTION-CODE OF WS-DSP-RECORD
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION
+                          WS-DSP-RECORD
+                          WS-ACCT-RECORD
+                          WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " RSLV result=" WS-DSP-RESULT-CODE
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+
+    *> Balance should remain $1500 (AP keeps provisional credit)
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 1500.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " post-RSLV ledger="
+            ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=1500.00 (credit kept)"
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+    IF DSP-STATUS OF WS-DSP-RECORD NOT = "R"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " RSLV status=" DSP-STATUS OF WS-DSP-RECORD
+            " expected=R"
+        GO TO TEST-IE-F12-EXIT
+    END-IF
+
+    ADD 1 TO WS-PASS-COUNT
+    DISPLAY "  PASS: " WS-TEST-NAME.
+TEST-IE-F12-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> IE-F13: OD approval + NSF fee assessment
+*> Checking $100, OD opted-in, OD limit $500, attempt $300 check
+*> ODMGMT0 should approve with NSF fee. Then verify fee counter.
+*> ---------------------------------------------------------------
+TEST-IE-F13.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IE-F13: OD approval with NSF fee assessment"
+        TO WS-TEST-NAME
+
+    *> --- Initialize checking with $100, OD limit $500
+    INITIALIZE WS-ACCT-RECORD
+    MOVE 400000000013 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 100.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 100.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "Y" TO ACCT-OD-OPTED-IN OF WS-ACCT-RECORD
+    MOVE "N" TO ACCT-OD-PROTECTION OF WS-ACCT-RECORD
+    MOVE 500.00 TO ACCT-OD-LIMIT OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-NSF-COUNT-MTD OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-NSF-COUNT-YTD OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+
+    *> --- OD request: $300 check from checking channel
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE 300.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "CHK" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING WS-ACCT-RECORD
+                         WS-OD-REQUEST
+                         WS-OD-RESULT
+
+    IF WS-OD-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-OD-RESULT-CODE
+            " msg=" WS-OD-RESULT-MSG
+        GO TO TEST-IE-F13-EXIT
+    END-IF
+
+    *> Verify OD approved
+    IF WS-OD-APPROVED NOT = "Y"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " approved=" WS-OD-APPROVED " expected=Y"
+        GO TO TEST-IE-F13-EXIT
+    END-IF
+
+    *> Verify NSF fee assessed ($300-$100=$200 OD > $5 de minimis)
+    IF WS-OD-FEE-ASSESSED = 0
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " fee=0 expected>0 (OD amount $200)"
+        GO TO TEST-IE-F13-EXIT
+    END-IF
+
+    *> Verify NSF counter incremented
+    IF ACCT-NSF-COUNT-TODAY OF WS-ACCT-RECORD NOT = 1
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " nsf-today="
+            ACCT-NSF-COUNT-TODAY OF WS-ACCT-RECORD
+            " expected=1"
+        GO TO TEST-IE-F13-EXIT
+    END-IF
+
+    ADD 1 TO WS-PASS-COUNT
+    DISPLAY "  PASS: " WS-TEST-NAME.
+TEST-IE-F13-EXIT.
     CONTINUE.

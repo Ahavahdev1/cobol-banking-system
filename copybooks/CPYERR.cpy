@@ -12,6 +12,7 @@
     05  ERR-NOT-FOUND             PIC X(5) VALUE "E0004".
     05  ERR-DUPLICATE             PIC X(5) VALUE "E0005".
     05  ERR-UNAUTHORIZED          PIC X(5) VALUE "E0006".
+    05  ERR-MISSING-FIELD         PIC X(5) VALUE "E0007".
     *> Account errors
     05  ERR-ACCT-NOT-FOUND        PIC X(5) VALUE "E0010".
     05  ERR-ACCT-CLOSED           PIC X(5) VALUE "E0011".
