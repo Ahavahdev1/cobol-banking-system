@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (19 tests)
+*>        batch status, multi-account, error paths (20 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -51,6 +51,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-017
     PERFORM TEST-BE-018
     PERFORM TEST-BE-019
+    PERFORM TEST-BE-020
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -696,4 +697,48 @@ TEST-BE-019.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " accrued=" ACCT-ACCRUED-INT
             " expected>0"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-020: Frozen acct payment fails -> YTD-INT-EARNED preserved
+*> When TXNPOST0 rejects the interest payment (frozen), the daily
+*> interest was still earned and should remain in YTD-INT-EARNED.
+*> ---------------------------------------------------------------
+TEST-BE-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-020: Frozen pmt fail keeps YTD earned"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "F" TO ACCT-STATUS
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 50.000000 TO ACCT-ACCRUED-INT
+    *> Set payment due date to trigger payment attempt
+    MOVE 20260226 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 100.00 TO ACCT-YTD-INT-EARNED
+    MOVE 0.00 TO ACCT-YTD-INT-PAID
+    MOVE 25.000000 TO ACCT-PTD-INT-EARNED
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> YTD-INT-EARNED should be > 100.00 (kept daily interest)
+    *> YTD-INT-PAID should be 0 (payment failed)
+    *> ACCRUED-INT should be > 50 (pre + daily, not paid out)
+    IF ACCT-YTD-INT-EARNED > 100.000000
+        AND ACCT-YTD-INT-PAID = 0
+        AND ACCT-ACCRUED-INT > 50.000000
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+            " ytd-earned=" ACCT-YTD-INT-EARNED
+            " ytd-paid=" ACCT-YTD-INT-PAID
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " ytd-earned=" ACCT-YTD-INT-EARNED
+            " ytd-paid=" ACCT-YTD-INT-PAID
+            " accrued=" ACCT-ACCRUED-INT
     END-IF.

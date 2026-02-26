@@ -274,12 +274,15 @@ EOD-POST-INTEREST-PAYMENT.
         END-ADD
         PERFORM ADVANCE-NEXT-PAY-DATE
     ELSE
-        *> Rollback: restore pre-INTCALC0 accrued interest + today
+        *> Rollback: restore accrued interest + today's daily,
+        *> and restore YTD-INT-PAID (payment didn't happen).
+        *> DO NOT restore YTD-INT-EARNED or PTD-INT-EARNED —
+        *> INTCALC0 correctly added today's daily interest to them,
+        *> and the interest was earned regardless of whether the
+        *> payment was successfully posted.
         MOVE WS-SAVE-ACCRUED-INT TO ACCT-ACCRUED-INT
         ADD WS-DAILY-INT-AMT TO ACCT-ACCRUED-INT
         MOVE WS-SAVE-YTD-INT-PAID TO ACCT-YTD-INT-PAID
-        MOVE WS-SAVE-YTD-INT-EARNED TO ACCT-YTD-INT-EARNED
-        MOVE WS-SAVE-PTD-INT-EARNED TO ACCT-PTD-INT-EARNED
         *> Advance next-pay-date even on failure to prevent infinite
         *> retry on every subsequent EOD run. Accrued interest is
         *> preserved and will be paid on the next payment cycle.
