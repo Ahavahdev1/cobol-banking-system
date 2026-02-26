@@ -55,6 +55,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-025
     PERFORM TEST-DP-026
     PERFORM TEST-DP-027
+    PERFORM TEST-DP-028
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1110,4 +1111,43 @@ TEST-DP-027.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0036"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-028: RSLV on already-denied dispute -> E0086
+*> Only P/I/C statuses are resolvable. D (denied) is not.
+*> ---------------------------------------------------------------
+TEST-DP-028.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-028: RSLV denied dispute -> E0086"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE 100000000005 TO DSP-ACCT-NUMBER
+    MOVE 000000000000001 TO DSP-DISPUTE-ID
+    MOVE 000000000000400 TO DSP-TXN-ID
+    MOVE 300.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    *> Manually set status to D (denied) — simulating prior denial
+    MOVE "D" TO DSP-STATUS
+    MOVE 20260220 TO DSP-DISPUTE-DATE
+    MOVE 20260301 TO DSP-DEADLINE-DATE
+    MOVE 100000000005 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "N" TO ACCT-DECEASED
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "AP" TO DSP-RESOLUTION-CODE
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0086"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0086"
     END-IF.

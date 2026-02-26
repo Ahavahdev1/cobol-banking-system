@@ -60,6 +60,7 @@ MAIN-PROGRAM.
     PERFORM TEST-HC-016
     PERFORM TEST-HC-017
     PERFORM TEST-HC-018
+    PERFORM TEST-HC-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -746,6 +747,45 @@ TEST-HC-018.
                 " exc=" WS-HOLD-EXCEPTION-FLAG
                 " rel=" WS-HOLD-RELEASE-DT
                 " nxt=" WS-HOLD-NEXT-DAY-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-019: New account boundary - exactly 30 days = NO exception
+*> HOLDCALC0 triggers new-acct exception when days < 30.
+*> At exactly 30 days, the exception should NOT trigger.
+*> ---------------------------------------------------------------
+TEST-HC-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-019: 30-day boundary = no exception"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 500.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "LC" TO WS-HR-CHECK-TYPE
+    MOVE 20260226 TO WS-HR-DEPOSIT-DATE
+    *> Account opened exactly 30 days ago (Jan 27 -> Feb 26 = 30)
+    MOVE 20260127 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-EXCEPTION-FLAG = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+                " expected=N (30 days = not new)"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
