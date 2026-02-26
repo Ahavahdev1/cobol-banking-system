@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (21 tests)
+*>        batch status, multi-account, error paths (23 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -53,6 +53,8 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-019
     PERFORM TEST-BE-020
     PERFORM TEST-BE-021
+    PERFORM TEST-BE-022
+    PERFORM TEST-BE-023
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -786,4 +788,56 @@ TEST-BE-021.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-022: Escheated account skipped (not processed)
+*> EODPROC0 only processes A/D/F; status E is excluded.
+*> ---------------------------------------------------------------
+TEST-BE-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-022: Escheated acct skipped" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "E" TO ACCT-STATUS
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF BATCH-ACCTS-PROCESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " processed=" BATCH-ACCTS-PROCESSED
+            " expected=0"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-023: Restricted account skipped (not processed)
+*> EODPROC0 only processes A/D/F; status R is excluded.
+*> ---------------------------------------------------------------
+TEST-BE-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-023: Restricted acct skipped" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "R" TO ACCT-STATUS
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF BATCH-ACCTS-PROCESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " processed=" BATCH-ACCTS-PROCESSED
+            " expected=0"
     END-IF.
