@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-FEECALC.
 *> ================================================================
 *> TEST-FEECALC - Test suite for FEECALC0 Fee Assessment Engine
 *> Tests: Monthly fees, waivers, NSF fees, de minimis, YTD tracking
-*> 14 tests (FE-001 to FE-014)
+*> 15 tests (FE-001 to FE-015)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-012
     PERFORM TEST-FE-013
     PERFORM TEST-FE-014
+    PERFORM TEST-FE-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -619,6 +620,52 @@ TEST-FE-014.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " expected=0 actual=" WS-FEE-ASSESSED
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-015: Multiple fee waivers eligible - employee takes priority
+*>         Account has EM waiver code, bal >= min, employee flag Y
+*>         Employee waiver should win with reason = "EM"
+*> ---------------------------------------------------------------
+TEST-FE-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-015: Multi-waiver EM priority" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE "EM" TO ACCT-FEE-WAIVER-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "Y" TO FEE-WAIVER-ELIGIBLE
+    MOVE 1500.00 TO FEE-MIN-BAL-THRESHOLD
+    MOVE "N" TO FEE-DD-WAIVER
+    MOVE "Y" TO FEE-EMPLOYEE-WAIVER
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0000"
+        IF WS-FEE-WAIVED-FLAG = "Y"
+            AND WS-FEE-WAIVER-REASON = "EM"
+            AND WS-FEE-ASSESSED = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " waived=" WS-FEE-WAIVED-FLAG
+                " reason=" WS-FEE-WAIVER-REASON
+                " fee=" WS-FEE-ASSESSED
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

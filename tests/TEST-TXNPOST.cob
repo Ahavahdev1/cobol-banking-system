@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (25 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (27 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-023
     PERFORM TEST-TP-024
     PERFORM TEST-TP-025
+    PERFORM TEST-TP-026
+    PERFORM TEST-TP-027
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -829,6 +831,72 @@ TEST-TP-025.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " avail=" ACCT-AVAIL-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-026: Credit to garnished account should succeed
+*>         Garnishment blocks debits only via legal hold, not credits
+*> ---------------------------------------------------------------
+TEST-TP-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-026: Credit garnished acct=E0000" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE "Y" TO ACCT-GARNISHMENT
+    MOVE 100.00 TO TXN-AMOUNT
+    MOVE 100.00 TO TXN-CASH-AMOUNT
+    COMPUTE WS-EXPECTED-BAL = ACCT-LEDGER-BAL + 100.00
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-027: Deposit to account with unknown sub-type "XX"
+*>         GL mapping should handle gracefully; posting succeeds
+*> ---------------------------------------------------------------
+TEST-TP-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-027: Unknown sub-type XX=E0000" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "XX" TO ACCT-SUB-TYPE
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 250.00 TO TXN-AMOUNT
+    MOVE 250.00 TO TXN-CASH-AMOUNT
+    COMPUTE WS-EXPECTED-BAL = ACCT-LEDGER-BAL + 250.00
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
                 " exp=" WS-EXPECTED-BAL
         END-IF
     ELSE

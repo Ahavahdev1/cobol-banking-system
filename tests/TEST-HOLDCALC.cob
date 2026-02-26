@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-HOLDCALC.
 *> ================================================================
 *> TEST-HOLDCALC - Test suite for HOLDCALC0 Reg CC Hold Calc
 *> Tests: Local/non-local checks, treasury, large deposits, cash,
-*>        wire, new accounts, exceptions (13 tests HC-001 to HC-013)
+*>        wire, new accounts, exceptions (14 tests HC-001 to HC-014)
 *> ================================================================
 
 DATA DIVISION.
@@ -55,6 +55,7 @@ MAIN-PROGRAM.
     PERFORM TEST-HC-011
     PERFORM TEST-HC-012
     PERFORM TEST-HC-013
+    PERFORM TEST-HC-014
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -536,6 +537,46 @@ TEST-HC-013.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " nxt=" WS-HOLD-NEXT-DAY-AMT
+                " rem=" WS-HOLD-REMAINING-AMT
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-014: Multiple exception conditions (new acct + large deposit
+*>         + repeated OD) should still compute valid hold
+*> ---------------------------------------------------------------
+TEST-HC-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-014: Multi-exception valid hold"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 6000.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "LC" TO WS-HR-CHECK-TYPE
+    MOVE 20260226 TO WS-HR-DEPOSIT-DATE
+    *> New account: opened 10 days ago (< 30 day threshold)
+    MOVE 20260216 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "Y" TO WS-HR-REPEATED-OD
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-EXCEPTION-FLAG = "Y"
+            AND WS-HOLD-REMAINING-AMT > 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " rem=" WS-HOLD-REMAINING-AMT
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
                 " rem=" WS-HOLD-REMAINING-AMT
                 " exc=" WS-HOLD-EXCEPTION-FLAG
         END-IF

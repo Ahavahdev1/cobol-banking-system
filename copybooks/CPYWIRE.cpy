@@ -23,6 +23,7 @@
         10  WIRE-BENE-NAME    PIC X(35).
         10  WIRE-BENE-ACCT    PIC X(34).
         10  WIRE-BENE-BANK    PIC 9(9).
+        10  WIRE-BENE-COUNTRY PIC X(3).
     05  WIRE-INTERMEDIARY.
         10  WIRE-INTM-BANK    PIC 9(9).
     05  WIRE-PURPOSE          PIC X(40).

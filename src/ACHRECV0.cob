@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. ACHRECV0.
 *> ================================================================
 *> ACHRECV0 - ACH Incoming File Processor
-*> Processes credits/debits, handles returns (R01-R08)
+*> Processes credits/debits, handles returns (R01-R09)
 *> ================================================================
 
 DATA DIVISION.
@@ -50,7 +50,9 @@ COPY CPYACCT.
 01  LS-ACH-RETURN-INFO.
     05  LS-ACH-RETURN-CODE       PIC X(3).
     *> R01 = NSF, R02 = Closed, R03 = No Account,
-    *> R08 = Stop Payment, R09 = Reg D violation
+    *> R04 = Invalid Acct Number, R06 = Deceased,
+    *> R07 = Auth Revoked, R08 = Stop Payment,
+    *> R09 = Reg D violation
     05  LS-ACH-RETURN-REASON     PIC X(30).
     05  LS-ACH-RETURN-FLAG       PIC X(1).
 01  LS-ACH-RESULT.
@@ -147,22 +149,42 @@ CHECK-BATCH-TOTALS.
 *> CHECK-ACCOUNT - Validate account exists and is usable
 *> ---------------------------------------------------------------
 CHECK-ACCOUNT.
+    *> Check for invalid account number format (all spaces/zeros)
+    IF LS-ACH-ACCT-NUMBER = SPACES
+        OR LS-ACH-ACCT-NUMBER = "00000000000000000"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R04" TO LS-ACH-RETURN-CODE
+        MOVE "INVALID ACCOUNT NUMBER" TO LS-ACH-RETURN-REASON
     *> Check for non-existent account
-    IF ACCT-NUMBER = 0 OR ACCT-STATUS = SPACES
+    ELSE IF ACCT-NUMBER = 0 OR ACCT-STATUS = SPACES
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R03" TO LS-ACH-RETURN-CODE
         MOVE "NO ACCOUNT ON FILE" TO LS-ACH-RETURN-REASON
+    *> Check for deceased account holder
+    ELSE IF ACCT-DECEASED = "Y"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R06" TO LS-ACH-RETURN-CODE
+        MOVE "ACCOUNT HOLDER DECEASED" TO LS-ACH-RETURN-REASON
     *> Check for closed account
     ELSE IF ACCT-STATUS = "C"
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R02" TO LS-ACH-RETURN-CODE
         MOVE "ACCOUNT CLOSED" TO LS-ACH-RETURN-REASON
+    *> Check for authorization revoked (debits to restricted acct)
+    ELSE IF ACCT-STATUS = "R"
+        AND WS-IS-DEBIT = "Y"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R07" TO LS-ACH-RETURN-CODE
+        MOVE "AUTH REVOKED BY RECEIVER" TO LS-ACH-RETURN-REASON
     *> Check for stop payment on debits
     ELSE IF ACCT-STOP-PAYS-ACTIVE > 0
         AND WS-IS-DEBIT = "Y"
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R08" TO LS-ACH-RETURN-CODE
         MOVE "STOP PAYMENT ON ITEM" TO LS-ACH-RETURN-REASON
+    END-IF
+    END-IF
+    END-IF
     END-IF
     END-IF
     END-IF.
@@ -183,13 +205,31 @@ CHECK-FUNDS.
 PROCESS-TRANSACTION.
     IF WS-IS-CREDIT = "Y"
         ADD LS-ACH-AMOUNT TO ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-ACH-RESULT-CODE
+                MOVE "ACH overflow on balance"
+                    TO LS-ACH-RESULT-MSG
+                GOBACK
+        END-ADD
     END-IF
     IF WS-IS-DEBIT = "Y"
         SUBTRACT LS-ACH-AMOUNT FROM ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-ACH-RESULT-CODE
+                MOVE "ACH overflow on balance"
+                    TO LS-ACH-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
     END-IF
     *> Bug fix: Update available balance to mirror TXNPOST0
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-ACH-RESULT-CODE
+            MOVE "ACH overflow on balance"
+                TO LS-ACH-RESULT-MSG
+            GOBACK
+    END-COMPUTE
     MOVE "N" TO LS-ACH-RETURN-FLAG
     MOVE "E0000" TO LS-ACH-RESULT-CODE
     MOVE "ACH TRANSACTION PROCESSED" TO LS-ACH-RESULT-MSG.

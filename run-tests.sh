@@ -108,7 +108,8 @@ compile_and_run "TEST-BATCH-EOD" "EODPROC0" "TXNPOST0" "INTCALC0" "GLPOST0" \
 compile_and_run "TEST-BATCH-EOM" "EOMPROC0" "TXNPOST0" "FEECALC0" "AUDTLOG0"
 compile_and_run "TEST-DISPMGT" "DISPMGT0" "DATEUTIL"
 compile_and_run "TEST-APYCALC" "APYCALC0"
-compile_and_run "TEST-WIREXFR" "WIREXFR0"
+compile_and_run "TEST-OFAC" "OFACCHK0"
+compile_and_run "TEST-WIREXFR" "WIREXFR0" "OFACCHK0"
 
 # Summary
 echo ""

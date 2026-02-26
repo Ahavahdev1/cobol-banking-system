@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-INTCALC.
 *> ================================================================
 *> TEST-INTCALC - Test suite for INTCALC0 Interest Calculator
 *> Tests: Daily interest, accrual bases, tiered rates, edge cases
-*> 25 tests (IC-001 to IC-025)
+*> 26 tests (IC-001 to IC-026)
 *> Includes P1 audit: year-end rollover + century boundary tests
 *> ================================================================
 
@@ -62,6 +62,7 @@ MAIN-PROGRAM.
     PERFORM TEST-IC-023
     PERFORM TEST-IC-024
     PERFORM TEST-IC-025
+    PERFORM TEST-IC-026
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -979,4 +980,32 @@ TEST-IC-025.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-026: Invalid accrual basis "Z" -> E0050
+*> ---------------------------------------------------------------
+TEST-IC-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-026: Invalid accrual basis Z -> E0050"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "Z" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 20260215 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0050"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected rc=E0050 actual="
+            WS-INT-RESULT-CODE
     END-IF.

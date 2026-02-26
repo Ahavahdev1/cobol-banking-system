@@ -10,6 +10,13 @@ WORKING-STORAGE SECTION.
 01  WS-CURRENT-DATE           PIC 9(8).
 01  WS-DUAL-CONTROL-THRESHOLD PIC S9(13)V99 VALUE +50000.00.
 
+*> OFAC screening areas
+COPY CPYOFAC.
+01  WS-OFAC-FUNCTION          PIC X(4).
+01  WS-OFAC-RESULT.
+    05  WS-OFAC-RESULT-CODE   PIC X(5).
+    05  WS-OFAC-RESULT-MSG    PIC X(50).
+
 LINKAGE SECTION.
 01  LS-WIRE-FUNCTION           PIC X(4).
 COPY CPYWIRE.
@@ -71,6 +78,23 @@ PROCESS-SEND.
         GOBACK
     END-IF
 
+    *> OFAC beneficiary screening (P1 regulatory requirement)
+    INITIALIZE OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE WIRE-BENE-NAME TO OFAC-CHECK-NAME
+    MOVE WIRE-BENE-COUNTRY TO OFAC-CHECK-COUNTRY
+    MOVE "B" TO OFAC-CHECK-TYPE
+    MOVE "CHKB" TO WS-OFAC-FUNCTION
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        MOVE "E0025" TO LS-WIRE-RESULT-CODE
+        MOVE "OFAC match on beneficiary"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Dual control: amounts >= 50000 require approval
     IF WIRE-AMOUNT >= WS-DUAL-CONTROL-THRESHOLD
         IF WIRE-APPROVED-BY = SPACES
@@ -83,8 +107,20 @@ PROCESS-SEND.
 
     *> Debit account
     SUBTRACT WIRE-AMOUNT FROM ACCT-LEDGER-BAL
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-WIRE-RESULT-CODE
+            MOVE "Arithmetic overflow on wire send"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+    END-SUBTRACT
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-WIRE-RESULT-CODE
+            MOVE "Arithmetic overflow on wire send"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     *> Set wire status and date
     MOVE "PR" TO WIRE-STATUS
@@ -119,8 +155,20 @@ PROCESS-RECV.
 
     *> Credit account
     ADD WIRE-AMOUNT TO ACCT-LEDGER-BAL
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-WIRE-RESULT-CODE
+            MOVE "Arithmetic overflow on wire receive"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+    END-ADD
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-WIRE-RESULT-CODE
+            MOVE "Arithmetic overflow on wire receive"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     *> Set wire status
     MOVE "CP" TO WIRE-STATUS
@@ -143,15 +191,39 @@ PROCESS-REVERSE.
     *> If incoming wire was credited, subtract from balance
     IF WIRE-TYPE = "I"
         SUBTRACT WIRE-AMOUNT FROM ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-WIRE-RESULT-CODE
+                MOVE "Arithmetic overflow on wire reversal"
+                    TO LS-WIRE-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
         COMPUTE ACCT-AVAIL-BAL =
             ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-WIRE-RESULT-CODE
+                MOVE "Arithmetic overflow on wire reversal"
+                    TO LS-WIRE-RESULT-MSG
+                GOBACK
+        END-COMPUTE
     END-IF
 
     *> If outgoing wire was debited, add back to balance
     IF WIRE-TYPE = "O"
         ADD WIRE-AMOUNT TO ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-WIRE-RESULT-CODE
+                MOVE "Arithmetic overflow on wire reversal"
+                    TO LS-WIRE-RESULT-MSG
+                GOBACK
+        END-ADD
         COMPUTE ACCT-AVAIL-BAL =
             ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-WIRE-RESULT-CODE
+                MOVE "Arithmetic overflow on wire reversal"
+                    TO LS-WIRE-RESULT-MSG
+                GOBACK
+        END-COMPUTE
     END-IF
 
     *> Set wire status to reversed
