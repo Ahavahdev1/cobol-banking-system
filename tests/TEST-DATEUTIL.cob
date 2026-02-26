@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DATEUTIL.
 *> ================================================================
 *> TEST-DATEUTIL - Test suite for DATEUTIL date utility functions
-*> Tests: BDAY, WKDY, DIFF, LEAP functions (20 tests)
+*> Tests: BDAY, WKDY, DIFF, LEAP functions (21 tests)
 *> Includes P1 audit: year-end rollover + century boundary tests
 *> ================================================================
 
@@ -53,6 +53,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DU-018
     PERFORM TEST-DU-019
     PERFORM TEST-DU-020
+    PERFORM TEST-DU-021
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -640,4 +641,27 @@ TEST-DU-020.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-DATE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-021: Invalid function "XXXX" -> E0001
+*> ---------------------------------------------------------------
+TEST-DU-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-021: Invalid function XXXX" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "XXXX" TO WS-FUNCTION
+    MOVE 20260226 TO WS-DATE1
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-DATE-RESULT-CODE
+            " expected=E0001"
     END-IF.

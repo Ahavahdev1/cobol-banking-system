@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (30 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (32 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -61,6 +61,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-028
     PERFORM TEST-TP-029
     PERFORM TEST-TP-030
+    PERFORM TEST-TP-031
+    PERFORM TEST-TP-032
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1023,4 +1025,94 @@ TEST-TP-030.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0000 actual=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-031: Reverse a deposit (REV, original was C) -> balance decreases
+*> Account starts at $5000, reverse a $500 deposit -> $4500
+*> ---------------------------------------------------------------
+TEST-TP-031.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-031: Reverse deposit bal=4500" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    INITIALIZE TXN-RECORD
+    MOVE 000000000000031 TO TXN-ID
+    MOVE 00001 TO TXN-SEQUENCE
+    MOVE 000012345678 TO TXN-ACCT-NUMBER
+    MOVE 2 TO TXN-ACCT-CHECK-DIGIT
+    MOVE 0001 TO TXN-BRANCH-ID
+    MOVE "TELLER01" TO TXN-TELLER-ID
+    MOVE "BR" TO TXN-CHANNEL
+    MOVE "REV" TO TXN-TYPE
+    MOVE "C" TO TXN-DR-CR
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 20260226 TO TXN-POST-DATE
+    MOVE 120000 TO TXN-POST-TIME
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 4500.00 TO WS-EXPECTED-BAL
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-032: Reverse a withdrawal (REV, original was D) -> balance increases
+*> Account starts at $5000, reverse a $200 withdrawal -> $5200
+*> ---------------------------------------------------------------
+TEST-TP-032.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-032: Reverse withdrawal bal=5200" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    INITIALIZE TXN-RECORD
+    MOVE 000000000000032 TO TXN-ID
+    MOVE 00001 TO TXN-SEQUENCE
+    MOVE 000012345678 TO TXN-ACCT-NUMBER
+    MOVE 2 TO TXN-ACCT-CHECK-DIGIT
+    MOVE 0001 TO TXN-BRANCH-ID
+    MOVE "TELLER01" TO TXN-TELLER-ID
+    MOVE "BR" TO TXN-CHANNEL
+    MOVE "REV" TO TXN-TYPE
+    MOVE "D" TO TXN-DR-CR
+    MOVE 200.00 TO TXN-AMOUNT
+    MOVE 20260226 TO TXN-POST-DATE
+    MOVE 120000 TO TXN-POST-TIME
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 5200.00 TO WS-EXPECTED-BAL
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
     END-IF.

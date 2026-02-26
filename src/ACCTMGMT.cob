@@ -57,6 +57,11 @@ OPEN-ACCOUNT.
         EXIT PARAGRAPH
     END-IF
 
+    PERFORM VALIDATE-PRODUCT-CODE
+    IF LS-ACCT-RESULT-CODE NOT = "E0000"
+        EXIT PARAGRAPH
+    END-IF
+
     MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE-DATA
 
     MOVE "A" TO ACCT-STATUS
@@ -103,6 +108,38 @@ CLOSE-ACCOUNT.
 
     MOVE "E0000" TO LS-ACCT-RESULT-CODE
     MOVE "Account closed successfully" TO LS-ACCT-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> VALIDATE-PRODUCT-CODE - Validate product code and set
+*> account type/sub-type defaults based on product
+*> ---------------------------------------------------------------
+VALIDATE-PRODUCT-CODE.
+    EVALUATE ACCT-PRODUCT-CODE
+        WHEN "DDA1"
+            MOVE "D" TO ACCT-TYPE
+            MOVE "CH" TO ACCT-SUB-TYPE
+        WHEN "DDA2"
+            MOVE "D" TO ACCT-TYPE
+            MOVE "CH" TO ACCT-SUB-TYPE
+        WHEN "SAV1"
+            MOVE "D" TO ACCT-TYPE
+            MOVE "SV" TO ACCT-SUB-TYPE
+        WHEN "MMA1"
+            MOVE "D" TO ACCT-TYPE
+            MOVE "MM" TO ACCT-SUB-TYPE
+        WHEN OTHER
+            *> Check if it starts with "CD" for CD terms
+            IF ACCT-PRODUCT-CODE(1:2) = "CD"
+                MOVE "D" TO ACCT-TYPE
+                MOVE "CD" TO ACCT-SUB-TYPE
+            ELSE
+                MOVE "E0018" TO LS-ACCT-RESULT-CODE
+                MOVE "Invalid product code"
+                    TO LS-ACCT-RESULT-MSG
+                EXIT PARAGRAPH
+            END-IF
+    END-EVALUATE
+    MOVE "E0000" TO LS-ACCT-RESULT-CODE.
 
 *> ---------------------------------------------------------------
 *> CHECK-DIGIT - Luhn check digit calculation/validation

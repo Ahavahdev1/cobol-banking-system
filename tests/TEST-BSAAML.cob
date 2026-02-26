@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BSAAML.
 *> ================================================================
 *> TEST-BSAAML - Test suite for BSACTRO BSA/AML CTR Generator
 *> Tests: CTR threshold, aggregation, exemptions, cash direction
-*> 8 tests (BA-001 to BA-008)
+*> 9 tests (BA-001 to BA-009)
 *> ================================================================
 
 DATA DIVISION.
@@ -47,6 +47,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BA-006
     PERFORM TEST-BA-007
     PERFORM TEST-BA-008
+    PERFORM TEST-BA-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -386,4 +387,39 @@ TEST-BA-008.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-BSA-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-009: Invalid function "XXXX" -> E0001
+*> ---------------------------------------------------------------
+TEST-BA-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-009: Invalid function XXXX -> E0001"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "XXXX" TO WS-FUNCTION
+    MOVE 1000000001 TO WS-BSA-CUST-ID
+    MOVE 20260215 TO WS-BSA-TXN-DATE
+    MOVE 5000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "I" TO WS-BSA-CASH-DIRECTION
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 100000000001 TO WS-BSA-ACCT-NUMBER
+    MOVE "N" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0001"
+        IF WS-BSA-CTR-REQUIRED = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " CTR=" WS-BSA-CTR-REQUIRED " expected=N"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE " expected=E0001"
     END-IF.

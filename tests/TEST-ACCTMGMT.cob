@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (13 tests)
+*> Tests: OPEN, CLOS, CHKD functions (16 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -39,6 +39,9 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-011
     PERFORM TEST-AM-012
     PERFORM TEST-AM-013
+    PERFORM TEST-AM-014
+    PERFORM TEST-AM-015
+    PERFORM TEST-AM-016
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -416,6 +419,92 @@ TEST-AM-013.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " status=" ACCT-STATUS
                 " close=" ACCT-CLOSE-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-014: OPEN with valid product code "DDA1" -> E0000
+*> ---------------------------------------------------------------
+TEST-AM-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-014: OPEN valid product DDA1=E0000"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-TYPE = "D" AND ACCT-SUB-TYPE = "CH"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " type=" ACCT-TYPE
+                " sub=" ACCT-SUB-TYPE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-015: OPEN with invalid product code "XXXX" -> E0018
+*> ---------------------------------------------------------------
+TEST-AM-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-015: OPEN invalid product=E0018"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "XXXX" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0018"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0018 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-016: OPEN with CD product "CD06" -> E0000, sub-type=CD
+*> ---------------------------------------------------------------
+TEST-AM-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-016: OPEN CD product CD06=E0000"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "CD06" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-TYPE = "D" AND ACCT-SUB-TYPE = "CD"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " type=" ACCT-TYPE
+                " sub=" ACCT-SUB-TYPE
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

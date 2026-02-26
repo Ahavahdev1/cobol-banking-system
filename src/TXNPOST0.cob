@@ -30,6 +30,10 @@ PROCEDURE DIVISION USING TXN-RECORD
 MAIN-LOGIC.
     PERFORM VALIDATE-AMOUNT
     PERFORM VALIDATE-ACCOUNT-STATUS
+    *> For reversals, swap the debit/credit direction
+    IF TXN-TYPE = "REV"
+        PERFORM SETUP-REVERSAL
+    END-IF
     PERFORM CHECK-BALANCE
     PERFORM CHECK-CD-WITHDRAWAL
     PERFORM CAPTURE-BEFORE-SNAPSHOT
@@ -88,6 +92,18 @@ VALIDATE-ACCOUNT-STATUS.
         MOVE "E0036" TO LS-TXN-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-TXN-RESULT-MSG
         GOBACK
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Set up reversal - swap debit/credit direction
+*> A reversal of a credit (deposit) becomes a debit
+*> A reversal of a debit (withdrawal) becomes a credit
+*> ---------------------------------------------------------------
+SETUP-REVERSAL.
+    IF TXN-DR-CR = "C"
+        MOVE "D" TO TXN-DR-CR
+    ELSE
+        MOVE "C" TO TXN-DR-CR
     END-IF.
 
 *> ---------------------------------------------------------------
@@ -203,6 +219,18 @@ MAP-GL-ENTRIES.
         WHEN "INT"
             MOVE 0000008010 TO LS-GL-DR-ACCOUNT
             MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
+        WHEN "REV"
+            *> Reversal mirrors original GL but swapped direction
+            *> DR/CR already swapped by SETUP-REVERSAL
+            IF TXN-DR-CR = "D"
+                *> Reversing a deposit: debit deposit-GL, credit cash
+                MOVE WS-DEPOSIT-GL TO LS-GL-DR-ACCOUNT
+                MOVE 0000001010 TO LS-GL-CR-ACCOUNT
+            ELSE
+                *> Reversing a withdrawal: debit cash, credit deposit-GL
+                MOVE 0000001010 TO LS-GL-DR-ACCOUNT
+                MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
+            END-IF
     END-EVALUATE
     MOVE TXN-AMOUNT TO LS-GL-AMOUNT
     MOVE "Y" TO LS-GL-POST-FLAG.

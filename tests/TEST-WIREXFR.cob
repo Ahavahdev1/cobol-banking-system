@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, RVRS, INQY functions (12 tests)
+*> Tests: SEND, RECV, RVRS, INQY functions (13 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -46,6 +46,7 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-010
     PERFORM TEST-WR-011
     PERFORM TEST-WR-012
+    PERFORM TEST-WR-013
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -659,4 +660,32 @@ TEST-WR-012.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0040"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-013: Invalid function "XXXX" -> E0001
+*> ---------------------------------------------------------------
+TEST-WR-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-013: Invalid function XXXX -> E0001"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "XXXX" TO WS-WIRE-FUNCTION
+    *> Minimal account setup
+    MOVE 100000000001 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0001"
     END-IF.

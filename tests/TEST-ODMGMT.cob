@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ODMGMT.
 *> ================================================================
 *> TEST-ODMGMT - Test suite for ODMGMT0 Overdraft Management
 *> Tests: Reg E opt-in, OD limits, protection transfers, NSF caps,
-*>        de minimis (11 tests OD-001 to OD-011)
+*>        de minimis (12 tests OD-001 to OD-012)
 *> ================================================================
 
 DATA DIVISION.
@@ -47,6 +47,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-009
     PERFORM TEST-OD-010
     PERFORM TEST-OD-011
+    PERFORM TEST-OD-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -475,6 +476,54 @@ TEST-OD-011.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " fee=" WS-OD-FEE-ASSESSED " expected=36.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-012: Protection transfer where linked acct has $0
+*>         Main acct $50, txn $100, OD protection=T, linked=$0
+*>         Module approves and signals $50 transfer (caller handles)
+*> ---------------------------------------------------------------
+TEST-OD-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-012: Protection transfer linked $0"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 50.00 TO ACCT-LEDGER-BAL
+    MOVE 50.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "T" TO ACCT-OD-PROTECTION
+    MOVE 200000000001 TO ACCT-OD-LINKED-ACCT
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 100.00 TO WS-OD-TXN-AMOUNT
+    MOVE "AT" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0000"
+        IF WS-OD-APPROVED = "Y"
+            AND WS-OD-TRANSFER-AMT = 50.00
+            AND WS-OD-FEE-ASSESSED = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " transfer=" WS-OD-TRANSFER-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " approved=" WS-OD-APPROVED
+                " transfer=" WS-OD-TRANSFER-AMT
+                " fee=" WS-OD-FEE-ASSESSED
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

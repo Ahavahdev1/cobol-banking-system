@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (8 tests)
+*> Tests: File, provisional credit, resolve, inquiry (9 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -36,6 +36,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-006
     PERFORM TEST-DP-007
     PERFORM TEST-DP-008
+    PERFORM TEST-DP-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -379,6 +380,42 @@ TEST-DP-008.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " id=" DSP-DISPUTE-ID
                 " status=" DSP-STATUS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-009: FILE dispute -> deadline date is set (non-zero)
+*> ---------------------------------------------------------------
+TEST-DP-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-009: FILE dispute sets deadline date"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000200 TO DSP-TXN-ID
+    MOVE 150.00 TO DSP-TXN-AMOUNT
+    MOVE "ERRO" TO DSP-DISPUTE-TYPE
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0000"
+        IF DSP-DEADLINE-DATE > 0
+            AND DSP-DEADLINE-DATE > DSP-DISPUTE-DATE
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " filed=" DSP-DISPUTE-DATE
+                " deadline=" DSP-DEADLINE-DATE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " deadline=" DSP-DEADLINE-DATE
+                " dispute-date=" DSP-DISPUTE-DATE
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

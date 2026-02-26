@@ -4,7 +4,7 @@ PROGRAM-ID. TEST-FILEIO.
 *> TEST-FILEIO - Test suite for FILEIO0 Indexed File I/O Gateway
 *> Tests: OPEN/CLOSE/WRITE/READ/REWRITE/DELETE, bad status,
 *>        sequential browse, CIF file, audit immutability,
-*>        invalid file ID (22 tests FI-001 to FI-022)
+*>        invalid file ID, invalid function (23 tests FI-001 to FI-023)
 *> ================================================================
 
 DATA DIVISION.
@@ -51,6 +51,7 @@ MAIN-PROGRAM.
     PERFORM TEST-FI-020
     PERFORM TEST-FI-021
     PERFORM TEST-FI-022
+    PERFORM TEST-FI-023
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -639,4 +640,32 @@ TEST-FI-022.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected error but got E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FI-023: Invalid function code "XXXX" -> E0001
+*> ---------------------------------------------------------------
+TEST-FI-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FI-023: Invalid function XXXX -> E0001"
+        TO WS-TEST-NAME
+    INITIALIZE LS-FILE-REQUEST
+    INITIALIZE LS-FILE-RESULT
+    MOVE "XXXX" TO LS-FIO-FUNCTION
+    MOVE "ACCT" TO LS-FIO-FILE-ID
+    CALL "FILEIO0" USING LS-FILE-REQUEST WS-RECORD-AREA
+                         LS-FILE-RESULT
+    IF LS-FIO-RESULT-CODE = "E0001"
+        IF LS-FIO-STATUS = "99"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" LS-FIO-STATUS " expected=99"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" LS-FIO-RESULT-CODE " expected=E0001"
     END-IF.
