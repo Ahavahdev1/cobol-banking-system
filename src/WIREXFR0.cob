@@ -336,6 +336,12 @@ PROCESS-REVERSE.
         MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-GARNISHMENT = "Y" AND WIRE-TYPE = "I"
+        MOVE "E0045" TO LS-WIRE-RESULT-CODE
+        MOVE "Account under garnishment - reversal blocked"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> If incoming wire was credited, subtract from balance
     IF WIRE-TYPE = "I"

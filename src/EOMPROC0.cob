@@ -85,7 +85,11 @@ MAIN-LOGIC.
     MOVE "S" TO BATCH-STATUS
 
     *> Process provided account
+    *> Frozen accounts still need MTD counter resets, statement
+    *> date advancement, and YTD resets. Fees are skipped for
+    *> frozen accounts since fee posting is a debit.
     IF ACCT-STATUS = "A" OR ACCT-STATUS = "D"
+        OR ACCT-STATUS = "F"
         PERFORM PROCESS-EOM-ACCOUNT
     END-IF
 
@@ -130,12 +134,14 @@ PROCESS-EOM-ACCOUNT.
         MOVE 0 TO ACCT-YTD-INT-PAID
     END-IF
 
-    *> Step 1: Assess monthly fee
-    PERFORM EOM-ASSESS-FEE
+    *> Step 1: Assess monthly fee (skip for frozen accounts)
+    IF ACCT-STATUS NOT = "F"
+        PERFORM EOM-ASSESS-FEE
 
-    *> Step 2: Post fee if assessed
-    IF WS-FEE-ASSESSED > 0
-        PERFORM EOM-POST-FEE
+        *> Step 2: Post fee if assessed
+        IF WS-FEE-ASSESSED > 0
+            PERFORM EOM-POST-FEE
+        END-IF
     END-IF
 
     *> Step 3: Reset MTD counters

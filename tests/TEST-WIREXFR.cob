@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, COMP, RVRS, INQY functions (39 tests)
+*> Tests: SEND, RECV, COMP, RVRS, INQY functions (40 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -73,6 +73,7 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-037
     PERFORM TEST-WR-038
     PERFORM TEST-WR-039
+    PERFORM TEST-WR-040
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1752,6 +1753,46 @@ TEST-WR-039.
     MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
     MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
     MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE "Y" TO ACCT-GARNISHMENT OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0045"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0045"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-040: RVRS incoming wire with garnishment -> E0045
+*> Reversing an incoming wire is a debit; garnishment blocks debits.
+*> ---------------------------------------------------------------
+TEST-WR-040.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-040: RVRS incoming garnished -> E0045"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "RVRS" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000040" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "I" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 3000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "CP" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE 100000000040 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 13000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 13000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
     MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
     MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
     MOVE "Y" TO ACCT-GARNISHMENT OF WS-ACCT-RECORD

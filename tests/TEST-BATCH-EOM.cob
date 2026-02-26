@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip, statement dates, YTD reset (18 tests)
+*>        closed-account skip, statement dates, YTD reset (19 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-016
     PERFORM TEST-EM-017
     PERFORM TEST-EM-018
+    PERFORM TEST-EM-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -682,6 +683,50 @@ TEST-EM-018.
                 " fees=" BATCH-FEES-ASSESSED
                 " bal=" ACCT-LEDGER-BAL
                 " expected fees=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-019: Frozen account gets MTD reset but no fee debit
+*> Frozen accounts still need counter resets and statement date
+*> advancement, but fee posting is a debit and must be skipped.
+*> ---------------------------------------------------------------
+TEST-EM-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-019: Frozen acct MTD reset, no fee"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    MOVE "F" TO ACCT-STATUS
+    MOVE 5 TO ACCT-NSF-COUNT-MTD
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260228 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-NSF-COUNT-MTD = 0
+            AND ACCT-LEDGER-BAL = WS-SAVED-LEDGER-BAL
+            AND BATCH-FEES-ASSESSED = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " nsf-mtd=" ACCT-NSF-COUNT-MTD
+                " bal=" ACCT-LEDGER-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " nsf-mtd=" ACCT-NSF-COUNT-MTD
+                " bal=" ACCT-LEDGER-BAL
+                " fees=" BATCH-FEES-ASSESSED
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
