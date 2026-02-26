@@ -1,0 +1,175 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. HOLDCALC0.
+*> ================================================================
+*> HOLDCALC0 - Regulation CC Hold Calculation
+*> Determines hold amounts and release dates per Reg CC
+*> ================================================================
+
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+COPY CPYCONST.
+COPY CPYERR.
+
+01  WS-DEPOSIT-AMT            PIC S9(13)V99.
+01  WS-NEXT-DAY-THRESHOLD     PIC S9(13)V99.
+
+*> Date arithmetic fields
+01  WS-DEP-DATE-INT            PIC 9(8).
+01  WS-OPEN-DATE-INT           PIC 9(8).
+01  WS-DEP-DATE-YYYYMMDD.
+    05  WS-DEP-YYYY            PIC 9(4).
+    05  WS-DEP-MM              PIC 9(2).
+    05  WS-DEP-DD              PIC 9(2).
+01  WS-OPEN-DATE-YYYYMMDD.
+    05  WS-OPEN-YYYY           PIC 9(4).
+    05  WS-OPEN-MM             PIC 9(2).
+    05  WS-OPEN-DD             PIC 9(2).
+01  WS-DEP-INTEGER-DATE        PIC 9(8).
+01  WS-OPEN-INTEGER-DATE       PIC 9(8).
+01  WS-DAYS-DIFF               PIC S9(8).
+
+01  WS-EXCEPTION-FLAG          PIC X(1).
+01  WS-HOLD-DAYS               PIC 9(2).
+
+LINKAGE SECTION.
+01  LS-HOLD-REQUEST.
+    05  LS-HR-ACCT-NUMBER         PIC 9(12).
+    05  LS-HR-DEPOSIT-AMT         PIC S9(13)V99.
+    05  LS-HR-CHECK-TYPE          PIC X(2).
+    *> LC = Local, NL = Non-local, TR = Treasury,
+    *> CA = Cashier, CS = Cash, WR = Wire
+    05  LS-HR-DEPOSIT-DATE        PIC 9(8).
+    05  LS-HR-ACCT-OPEN-DATE      PIC 9(8).
+    05  LS-HR-IS-REDEPOSIT        PIC X(1).
+    05  LS-HR-REPEATED-OD         PIC X(1).
+COPY CPYHOLD.
+01  LS-HOLD-RESULT.
+    05  LS-HOLD-RESULT-CODE       PIC X(5).
+    05  LS-HOLD-RESULT-MSG        PIC X(50).
+    05  LS-HOLD-NEXT-DAY-AMT      PIC S9(13)V99.
+    05  LS-HOLD-REMAINING-AMT     PIC S9(13)V99.
+    05  LS-HOLD-RELEASE-DT        PIC 9(8).
+    05  LS-HOLD-EXCEPTION-FLAG    PIC X(1).
+
+PROCEDURE DIVISION USING LS-HOLD-REQUEST
+                         HOLD-RECORD
+                         LS-HOLD-RESULT.
+MAIN-LOGIC.
+    INITIALIZE LS-HOLD-RESULT
+    MOVE "N" TO WS-EXCEPTION-FLAG
+    MOVE LS-HR-DEPOSIT-AMT TO WS-DEPOSIT-AMT
+
+    EVALUATE LS-HR-CHECK-TYPE
+        WHEN "CS"
+            PERFORM CALC-CASH-WIRE
+        WHEN "WR"
+            PERFORM CALC-CASH-WIRE
+        WHEN "TR"
+            PERFORM CALC-TREASURY-CASHIER
+        WHEN "CA"
+            PERFORM CALC-TREASURY-CASHIER
+        WHEN "LC"
+            PERFORM CALC-CHECK-DEPOSIT
+        WHEN "NL"
+            PERFORM CALC-CHECK-DEPOSIT
+        WHEN OTHER
+            PERFORM CALC-CHECK-DEPOSIT
+    END-EVALUATE
+
+    *> Check exception conditions for check deposits only
+    IF LS-HR-CHECK-TYPE NOT = "CS"
+        AND LS-HR-CHECK-TYPE NOT = "WR"
+        PERFORM CHECK-EXCEPTIONS
+    END-IF
+
+    *> Populate hold record
+    MOVE LS-HR-ACCT-NUMBER TO HOLD-ACCT-NUMBER
+    MOVE "CC" TO HOLD-TYPE
+    MOVE LS-HOLD-REMAINING-AMT TO HOLD-AMOUNT
+    MOVE LS-HR-DEPOSIT-DATE TO HOLD-PLACE-DATE
+    MOVE LS-HOLD-RELEASE-DT TO HOLD-RELEASE-DATE
+    MOVE "ND" TO HOLD-REASON-CODE
+    MOVE "A" TO HOLD-STATUS
+
+    MOVE WS-EXCEPTION-FLAG TO LS-HOLD-EXCEPTION-FLAG
+    MOVE "E0000" TO LS-HOLD-RESULT-CODE
+    MOVE "Hold calculation complete" TO LS-HOLD-RESULT-MSG
+    GOBACK.
+
+*> ---------------------------------------------------------------
+*> Cash and Wire: no hold, full next-day availability
+*> ---------------------------------------------------------------
+CALC-CASH-WIRE.
+    MOVE WS-DEPOSIT-AMT TO LS-HOLD-NEXT-DAY-AMT
+    MOVE 0 TO LS-HOLD-REMAINING-AMT
+    MOVE LS-HR-DEPOSIT-DATE TO LS-HOLD-RELEASE-DT.
+
+*> ---------------------------------------------------------------
+*> Treasury / Cashier checks: $5,525 next-day threshold
+*> ---------------------------------------------------------------
+CALC-TREASURY-CASHIER.
+    IF WS-DEPOSIT-AMT <= WS-REGCC-TREASURY-AMT
+        MOVE WS-DEPOSIT-AMT TO LS-HOLD-NEXT-DAY-AMT
+        MOVE 0 TO LS-HOLD-REMAINING-AMT
+    ELSE
+        MOVE WS-REGCC-TREASURY-AMT TO LS-HOLD-NEXT-DAY-AMT
+        SUBTRACT WS-REGCC-TREASURY-AMT FROM WS-DEPOSIT-AMT
+            GIVING LS-HOLD-REMAINING-AMT
+    END-IF
+    MOVE LS-HR-DEPOSIT-DATE TO LS-HOLD-RELEASE-DT.
+
+*> ---------------------------------------------------------------
+*> Check deposits (LC, NL): $225 next-day threshold
+*> ---------------------------------------------------------------
+CALC-CHECK-DEPOSIT.
+    IF WS-DEPOSIT-AMT <= WS-REGCC-NEXT-DAY-AMT
+        MOVE WS-DEPOSIT-AMT TO LS-HOLD-NEXT-DAY-AMT
+        MOVE 0 TO LS-HOLD-REMAINING-AMT
+    ELSE
+        MOVE WS-REGCC-NEXT-DAY-AMT TO LS-HOLD-NEXT-DAY-AMT
+        SUBTRACT WS-REGCC-NEXT-DAY-AMT FROM WS-DEPOSIT-AMT
+            GIVING LS-HOLD-REMAINING-AMT
+    END-IF
+
+    IF LS-HR-CHECK-TYPE = "LC"
+        MOVE WS-REGCC-LOCAL-DAYS TO WS-HOLD-DAYS
+    ELSE
+        MOVE WS-REGCC-NONLOCAL-DAYS TO WS-HOLD-DAYS
+    END-IF
+    MOVE LS-HR-DEPOSIT-DATE TO LS-HOLD-RELEASE-DT.
+
+*> ---------------------------------------------------------------
+*> Check exception conditions (Reg CC)
+*> ---------------------------------------------------------------
+CHECK-EXCEPTIONS.
+    *> Large deposit: strictly greater than $5,525.00
+    IF WS-DEPOSIT-AMT > WS-REGCC-LARGE-DEP-AMT
+        MOVE "Y" TO WS-EXCEPTION-FLAG
+    END-IF
+
+    *> New account: deposit date - account open date < 30 days
+    PERFORM CALC-DAYS-BETWEEN
+    IF WS-DAYS-DIFF < WS-REGCC-NEW-ACCT-DAYS
+        MOVE "Y" TO WS-EXCEPTION-FLAG
+    END-IF
+
+    *> Redeposited check
+    IF LS-HR-IS-REDEPOSIT = "Y"
+        MOVE "Y" TO WS-EXCEPTION-FLAG
+    END-IF
+
+    *> Repeated overdraft
+    IF LS-HR-REPEATED-OD = "Y"
+        MOVE "Y" TO WS-EXCEPTION-FLAG
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Calculate days between account open date and deposit date
+*> Simple date difference using integer-of-date intrinsic
+*> ---------------------------------------------------------------
+CALC-DAYS-BETWEEN.
+    MOVE LS-HR-DEPOSIT-DATE TO WS-DEP-DATE-INT
+    MOVE LS-HR-ACCT-OPEN-DATE TO WS-OPEN-DATE-INT
+    COMPUTE WS-DAYS-DIFF =
+        FUNCTION INTEGER-OF-DATE(WS-DEP-DATE-INT)
+      - FUNCTION INTEGER-OF-DATE(WS-OPEN-DATE-INT).

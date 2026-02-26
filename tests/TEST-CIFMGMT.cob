@@ -1,0 +1,372 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. TEST-CIFMGMT.
+*> ================================================================
+*> TEST-CIFMGMT - Test suite for CIFMGMT CIF management
+*> Tests: VALD, INIT functions (10 tests)
+*> ================================================================
+
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01  WS-TEST-COUNT          PIC 9(3) VALUE 0.
+01  WS-PASS-COUNT          PIC 9(3) VALUE 0.
+01  WS-FAIL-COUNT          PIC 9(3) VALUE 0.
+01  WS-TEST-NAME           PIC X(40).
+01  WS-CURRENT-DATE-DATA.
+    05  WS-CURRENT-DATE    PIC 9(8).
+    05  WS-CURRENT-TIME    PIC 9(8).
+    05  WS-DIFF-GMT        PIC S9(4).
+
+*> CIFMGMT LINKAGE replicated in working storage
+01  WS-FUNCTION            PIC X(4).
+COPY CPYCIF.
+01  WS-CIF-RESULT.
+    05  WS-CIF-RESULT-CODE  PIC X(5).
+    05  WS-CIF-RESULT-MSG   PIC X(50).
+
+PROCEDURE DIVISION.
+MAIN-PROGRAM.
+    DISPLAY "========================================"
+    DISPLAY "TEST SUITE: CIFMGMT"
+    DISPLAY "========================================"
+    MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE-DATA
+
+    PERFORM TEST-CF-001
+    PERFORM TEST-CF-002
+    PERFORM TEST-CF-003
+    PERFORM TEST-CF-004
+    PERFORM TEST-CF-005
+    PERFORM TEST-CF-006
+    PERFORM TEST-CF-007
+    PERFORM TEST-CF-008
+    PERFORM TEST-CF-009
+    PERFORM TEST-CF-010
+
+    DISPLAY "========================================"
+    DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
+            " PASSED"
+    DISPLAY "         " WS-FAIL-COUNT " FAILED"
+    DISPLAY "========================================"
+    MOVE WS-FAIL-COUNT TO RETURN-CODE
+    STOP RUN.
+
+*> ---------------------------------------------------------------
+*> CF-001: VALD with valid CIF -> E0000
+*> ---------------------------------------------------------------
+TEST-CF-001.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-001: VALD valid CIF=E0000" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000001 TO CIF-CUST-ID
+    MOVE "DOE" TO CIF-NAME-LAST
+    MOVE "JOHN" TO CIF-NAME-FIRST
+    MOVE 123456789 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19800115 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE 20260101 TO CIF-CIP-VERIFY-DATE
+    MOVE "DL" TO CIF-CIP-DOC-TYPE
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 20260101 TO CIF-OFAC-CHECK-DATE
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-002: VALD with missing SSN (000000000) -> E0022
+*> ---------------------------------------------------------------
+TEST-CF-002.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-002: VALD missing SSN=E0022" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000002 TO CIF-CUST-ID
+    MOVE "DOE" TO CIF-NAME-LAST
+    MOVE "JANE" TO CIF-NAME-FIRST
+    MOVE 000000000 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19850520 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0022"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0022 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-003: VALD with invalid SSN-TYPE ("X") -> E0023
+*> ---------------------------------------------------------------
+TEST-CF-003.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-003: VALD bad SSN-TYPE=E0023" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000003 TO CIF-CUST-ID
+    MOVE "SMITH" TO CIF-NAME-LAST
+    MOVE "BOB" TO CIF-NAME-FIRST
+    MOVE 987654321 TO CIF-SSN-TIN
+    MOVE "X" TO CIF-SSN-TYPE
+    MOVE 19750310 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0023"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0023 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-004: VALD with invalid CUST-TYPE ("Z") -> E0024
+*> ---------------------------------------------------------------
+TEST-CF-004.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-004: VALD bad CUST-TYPE=E0024" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000004 TO CIF-CUST-ID
+    MOVE "JONES" TO CIF-NAME-LAST
+    MOVE "TOM" TO CIF-NAME-FIRST
+    MOVE 111223333 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19900101 TO CIF-DOB
+    MOVE "Z" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0024"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0024 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-005: VALD with OFAC match -> E0025
+*> ---------------------------------------------------------------
+TEST-CF-005.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-005: VALD OFAC match=E0025" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000005 TO CIF-CUST-ID
+    MOVE "BROWN" TO CIF-NAME-LAST
+    MOVE "ALICE" TO CIF-NAME-FIRST
+    MOVE 222334444 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19880601 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "M" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0025"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0025 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-006: VALD with BSA prohibited (rating=4) -> E0026
+*> ---------------------------------------------------------------
+TEST-CF-006.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-006: VALD BSA prohib=E0026" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000006 TO CIF-CUST-ID
+    MOVE "WILSON" TO CIF-NAME-LAST
+    MOVE "EVE" TO CIF-NAME-FIRST
+    MOVE 333445555 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19700815 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 4 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0026"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0026 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-007: VALD with CIP not verified -> E0027
+*> ---------------------------------------------------------------
+TEST-CF-007.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-007: VALD CIP unverif=E0027" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000007 TO CIF-CUST-ID
+    MOVE "TAYLOR" TO CIF-NAME-LAST
+    MOVE "FRANK" TO CIF-NAME-FIRST
+    MOVE 444556666 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19951201 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "N" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0027"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0027 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-008: INIT new CIF -> sets STATUS=A, OPEN-DATE, ACCOUNTS=0
+*> ---------------------------------------------------------------
+TEST-CF-008.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-008: INIT sets defaults" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "INIT" TO WS-FUNCTION
+    MOVE 1000000008 TO CIF-CUST-ID
+    MOVE "NEWCUST" TO CIF-NAME-LAST
+    MOVE "TEST" TO CIF-NAME-FIRST
+    MOVE 555667777 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19850101 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0000"
+        IF CIF-STATUS = "A"
+            AND CIF-OPEN-DATE NOT = 0
+            AND CIF-NUM-ACCOUNTS = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" CIF-STATUS
+                " open=" CIF-OPEN-DATE
+                " accts=" CIF-NUM-ACCOUNTS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-009: VALD with future DOB -> E0028
+*> ---------------------------------------------------------------
+TEST-CF-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-009: VALD future DOB=E0028" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000009 TO CIF-CUST-ID
+    MOVE "FUTURE" TO CIF-NAME-LAST
+    MOVE "KID" TO CIF-NAME-FIRST
+    MOVE 666778888 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 20301231 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0028"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0028 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-010: VALD with valid EIN (business) -> E0000
+*> ---------------------------------------------------------------
+TEST-CF-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-010: VALD valid EIN biz=E0000" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000010 TO CIF-CUST-ID
+    MOVE "ACME CORP" TO CIF-NAME-LAST
+    MOVE "BUSINESS" TO CIF-NAME-FIRST
+    MOVE 777889999 TO CIF-SSN-TIN
+    MOVE "E" TO CIF-SSN-TYPE
+    MOVE 20000101 TO CIF-DOB
+    MOVE "B" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE 20260101 TO CIF-CIP-VERIFY-DATE
+    MOVE "DL" TO CIF-CIP-DOC-TYPE
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 20260101 TO CIF-OFAC-CHECK-DATE
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0000 actual=" WS-CIF-RESULT-CODE
+    END-IF.

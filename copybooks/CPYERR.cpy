@@ -1,0 +1,71 @@
+*> ================================================================
+*> CPYERR.cpy - Error Code Definitions
+*> Used by: All modules for standardized error reporting
+*> ================================================================
+01  ERROR-CODES.
+    *> General errors
+    05  ERR-SUCCESS               PIC X(5) VALUE "E0000".
+    05  ERR-NOT-IMPLEMENTED       PIC X(5) VALUE "ESTUB".
+    05  ERR-INVALID-FUNCTION      PIC X(5) VALUE "E0001".
+    05  ERR-INVALID-INPUT         PIC X(5) VALUE "E0002".
+    05  ERR-SYSTEM-ERROR          PIC X(5) VALUE "E0003".
+    05  ERR-NOT-FOUND             PIC X(5) VALUE "E0004".
+    05  ERR-DUPLICATE             PIC X(5) VALUE "E0005".
+    05  ERR-UNAUTHORIZED          PIC X(5) VALUE "E0006".
+    *> Account errors
+    05  ERR-ACCT-NOT-FOUND        PIC X(5) VALUE "E0010".
+    05  ERR-ACCT-CLOSED           PIC X(5) VALUE "E0011".
+    05  ERR-ACCT-FROZEN           PIC X(5) VALUE "E0012".
+    05  ERR-ACCT-DORMANT          PIC X(5) VALUE "E0013".
+    05  ERR-ACCT-LEGAL-HOLD       PIC X(5) VALUE "E0014".
+    05  ERR-ACCT-DECEASED         PIC X(5) VALUE "E0015".
+    05  ERR-ACCT-HAS-BALANCE      PIC X(5) VALUE "E0016".
+    05  ERR-ACCT-HAS-HOLDS        PIC X(5) VALUE "E0017".
+    05  ERR-ACCT-INVALID-TYPE     PIC X(5) VALUE "E0018".
+    05  ERR-ACCT-CHECK-DIGIT      PIC X(5) VALUE "E0019".
+    *> CIF errors
+    05  ERR-CIF-NOT-FOUND         PIC X(5) VALUE "E0020".
+    05  ERR-CIF-NOT-VERIFIED      PIC X(5) VALUE "E0021".
+    05  ERR-CIF-MISSING-SSN       PIC X(5) VALUE "E0022".
+    05  ERR-CIF-INVALID-SSN-TYPE  PIC X(5) VALUE "E0023".
+    05  ERR-CIF-INVALID-CUST-TYPE PIC X(5) VALUE "E0024".
+    05  ERR-CIF-OFAC-MATCH        PIC X(5) VALUE "E0025".
+    05  ERR-CIF-BSA-PROHIBITED    PIC X(5) VALUE "E0026".
+    05  ERR-CIF-CIP-REQUIRED      PIC X(5) VALUE "E0027".
+    05  ERR-CIF-FUTURE-DOB        PIC X(5) VALUE "E0028".
+    *> Transaction errors
+    05  ERR-TXN-INSUF-FUNDS       PIC X(5) VALUE "E0030".
+    05  ERR-TXN-ZERO-AMOUNT       PIC X(5) VALUE "E0031".
+    05  ERR-TXN-NEGATIVE-AMOUNT   PIC X(5) VALUE "E0032".
+    05  ERR-TXN-ACCT-FROZEN       PIC X(5) VALUE "E0033".
+    05  ERR-TXN-ACCT-CLOSED       PIC X(5) VALUE "E0034".
+    05  ERR-TXN-LEGAL-HOLD        PIC X(5) VALUE "E0035".
+    05  ERR-TXN-DECEASED          PIC X(5) VALUE "E0036".
+    05  ERR-TXN-INVALID-TYPE      PIC X(5) VALUE "E0037".
+    05  ERR-TXN-GL-ERROR          PIC X(5) VALUE "E0038".
+    *> Interest errors
+    05  ERR-INT-INVALID-BASIS     PIC X(5) VALUE "E0050".
+    05  ERR-INT-INVALID-METHOD    PIC X(5) VALUE "E0051".
+    05  ERR-INT-ZERO-BALANCE      PIC X(5) VALUE "E0052".
+    05  ERR-INT-ACCT-CLOSED       PIC X(5) VALUE "E0053".
+    *> GL errors
+    05  ERR-GL-UNBALANCED         PIC X(5) VALUE "E0060".
+    05  ERR-GL-ACCT-INACTIVE      PIC X(5) VALUE "E0061".
+    05  ERR-GL-ACCT-FROZEN        PIC X(5) VALUE "E0062".
+    05  ERR-GL-ZERO-AMOUNT        PIC X(5) VALUE "E0063".
+    *> Hold errors
+    05  ERR-HOLD-INVALID-TYPE     PIC X(5) VALUE "E0070".
+    05  ERR-HOLD-EXCEPTION        PIC X(5) VALUE "E0071".
+    05  ERR-HOLD-NEW-ACCOUNT      PIC X(5) VALUE "E0072".
+    *> Compliance errors
+    05  ERR-CTR-REQUIRED          PIC X(5) VALUE "E0080".
+    05  ERR-REGD-EXCEEDED         PIC X(5) VALUE "E0081".
+    *> ACH errors
+    05  ERR-ACH-NSF               PIC X(5) VALUE "E0090".
+    05  ERR-ACH-ACCT-CLOSED       PIC X(5) VALUE "E0091".
+    05  ERR-ACH-NO-ACCOUNT        PIC X(5) VALUE "E0092".
+    05  ERR-ACH-STOP-PAY          PIC X(5) VALUE "E0093".
+    05  ERR-ACH-BATCH-MISMATCH    PIC X(5) VALUE "E0094".
+    *> OD errors
+    05  ERR-OD-NOT-OPTED-IN       PIC X(5) VALUE "E0095".
+    05  ERR-OD-LIMIT-EXCEEDED     PIC X(5) VALUE "E0096".
