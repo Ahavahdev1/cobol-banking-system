@@ -39,6 +39,7 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-008
     PERFORM TEST-EM-009
     PERFORM TEST-EM-010
+    PERFORM TEST-EM-011
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -331,3 +332,50 @@ TEST-EM-010.
             " next-stmt=" ACCT-NEXT-STMT-DATE
             " expected=20260328"
     END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-011: December batch rolls statement date to January next year
+*> Batch date = 20261231. Next statement date should become
+*> 20270131 (month 12 + 1 = 13 -> month 1, year + 1; day 31
+*> stays 31 since January has 31 days).
+*> ---------------------------------------------------------------
+TEST-EM-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-011: Dec->Jan year rollover on stmt date"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20261231 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+            " " WS-BATCH-RESULT-MSG
+        GO TO TEST-EM-011-EXIT
+    END-IF
+    *> Verify LAST-STMT-DATE = batch date (20261231)
+    IF ACCT-LAST-STMT-DATE NOT = 20261231
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " last-stmt=" ACCT-LAST-STMT-DATE
+            " expected=20261231"
+        GO TO TEST-EM-011-EXIT
+    END-IF
+    *> Verify NEXT-STMT-DATE rolled to January 2027
+    *> Dec(12)+1=13 -> month=1, year=2027, day=31 (Jan has 31 days)
+    IF ACCT-NEXT-STMT-DATE = 20270131
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " next-stmt=" ACCT-NEXT-STMT-DATE
+            " expected=20270131"
+    END-IF.
+TEST-EM-011-EXIT.
+    CONTINUE.

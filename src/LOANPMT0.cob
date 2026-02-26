@@ -220,7 +220,13 @@ CHECK-LATE.
             FUNCTION INTEGER-OF-DATE(LS-PAYMENT-DATE)
           - FUNCTION INTEGER-OF-DATE(ACCT-NEXT-PMT-DATE)
         MOVE WS-DAYS-LATE TO ACCT-PAST-DUE-DAYS
-        MOVE ACCT-PAYMENT-AMT TO ACCT-PAST-DUE-AMT
+        ADD ACCT-PAYMENT-AMT TO ACCT-PAST-DUE-AMT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Overflow on past due accumulation"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-ADD
         *> Assess late fee if not already assessed
         IF ACCT-LATE-FEE-ASSESSED = "N"
             MOVE "Y" TO ACCT-LATE-FEE-ASSESSED

@@ -92,6 +92,16 @@ COPY CPYAUDT.
     05  WS-AUDT-RESULT-CODE   PIC X(5).
     05  WS-AUDT-RESULT-MSG    PIC X(50).
 
+*> Next-pay-date advancement work fields
+01  WS-NP-DATE                 PIC 9(8).
+01  WS-NP-YYYY                PIC 9(4).
+01  WS-NP-MM                  PIC 9(2).
+01  WS-NP-DD                  PIC 9(2).
+01  WS-NP-MONTHS-TO-ADD       PIC 9(2).
+01  WS-NP-LEAP-REM4           PIC 9(4).
+01  WS-NP-LEAP-REM100         PIC 9(4).
+01  WS-NP-LEAP-REM400         PIC 9(4).
+
 *> Batch control
 01  WS-ACCTS-PROCESSED        PIC 9(8) VALUE 0.
 01  WS-ACCTS-ERRORS           PIC 9(8) VALUE 0.
@@ -229,8 +239,80 @@ EOD-POST-INTEREST-PAYMENT.
                           WS-TXN-RESULT
     IF WS-TXN-RESULT-CODE = "E0000"
         ADD WS-PAYMENT-AMT TO WS-TOTAL-INT-PAID
+        PERFORM ADVANCE-NEXT-PAY-DATE
     ELSE
         ADD 1 TO WS-ACCTS-ERRORS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Advance ACCT-INT-NEXT-PAY-DATE based on payment frequency
+*> ---------------------------------------------------------------
+ADVANCE-NEXT-PAY-DATE.
+    IF ACCT-INT-NEXT-PAY-DATE = 0
+        CONTINUE
+    ELSE
+        *> Determine months to add from frequency
+        EVALUATE ACCT-INT-PAY-FREQ
+            WHEN "M"
+                MOVE 1 TO WS-NP-MONTHS-TO-ADD
+            WHEN "Q"
+                MOVE 3 TO WS-NP-MONTHS-TO-ADD
+            WHEN "S"
+                MOVE 6 TO WS-NP-MONTHS-TO-ADD
+            WHEN "A"
+                MOVE 12 TO WS-NP-MONTHS-TO-ADD
+            WHEN OTHER
+                MOVE 1 TO WS-NP-MONTHS-TO-ADD
+        END-EVALUATE
+        *> Decompose YYYYMMDD into parts
+        MOVE ACCT-INT-NEXT-PAY-DATE TO WS-NP-DATE
+        DIVIDE WS-NP-DATE BY 10000
+            GIVING WS-NP-YYYY
+            REMAINDER WS-NP-DATE
+        DIVIDE WS-NP-DATE BY 100
+            GIVING WS-NP-MM
+            REMAINDER WS-NP-DD
+        *> Add months
+        ADD WS-NP-MONTHS-TO-ADD TO WS-NP-MM
+        *> Roll over year if needed
+        PERFORM UNTIL WS-NP-MM <= 12
+            SUBTRACT 12 FROM WS-NP-MM
+            ADD 1 TO WS-NP-YYYY
+        END-PERFORM
+        *> Cap day for shorter months
+        IF WS-NP-DD > 28
+            EVALUATE WS-NP-MM
+                WHEN 2
+                    DIVIDE WS-NP-YYYY BY 4
+                        GIVING WS-NP-LEAP-REM4
+                        REMAINDER WS-NP-LEAP-REM4
+                    DIVIDE WS-NP-YYYY BY 100
+                        GIVING WS-NP-LEAP-REM100
+                        REMAINDER WS-NP-LEAP-REM100
+                    DIVIDE WS-NP-YYYY BY 400
+                        GIVING WS-NP-LEAP-REM400
+                        REMAINDER WS-NP-LEAP-REM400
+                    IF WS-NP-LEAP-REM4 = 0
+                        AND (WS-NP-LEAP-REM100 NOT = 0
+                             OR WS-NP-LEAP-REM400 = 0)
+                        MOVE 29 TO WS-NP-DD
+                    ELSE
+                        MOVE 28 TO WS-NP-DD
+                    END-IF
+                WHEN 4
+                WHEN 6
+                WHEN 9
+                WHEN 11
+                    IF WS-NP-DD > 30
+                        MOVE 30 TO WS-NP-DD
+                    END-IF
+            END-EVALUATE
+        END-IF
+        *> Recompose date
+        COMPUTE ACCT-INT-NEXT-PAY-DATE =
+            WS-NP-YYYY * 10000
+            + WS-NP-MM * 100
+            + WS-NP-DD
     END-IF.
 
 *> ---------------------------------------------------------------

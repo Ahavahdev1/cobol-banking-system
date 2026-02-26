@@ -247,7 +247,7 @@ PROCESS-REVERSE.
         MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
-    IF ACCT-LEGAL-HOLD = "Y"
+    IF ACCT-LEGAL-HOLD = "Y" AND WIRE-TYPE = "I"
         MOVE "E0035" TO LS-WIRE-RESULT-CODE
         MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK

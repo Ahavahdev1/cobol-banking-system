@@ -111,6 +111,15 @@ MAIN-LOGIC.
 
     MOVE WS-DAILY-INTEREST TO LS-DAILY-INT-AMT
 
+    *> Accumulate daily interest into YTD earned
+    ADD WS-DAILY-INTEREST TO ACCT-YTD-INT-EARNED
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-INT-RESULT-CODE
+            MOVE "Arithmetic overflow on YTD interest earned"
+                TO LS-INT-RESULT-MSG
+            GOBACK
+    END-ADD
+
     *> Check if payment is due
     MOVE "N" TO WS-PAYMENT-FLAG
     IF ACCT-INT-NEXT-PAY-DATE > 0
@@ -129,6 +138,14 @@ MAIN-LOGIC.
                     TO LS-INT-RESULT-MSG
                 GOBACK
         END-COMPUTE
+        *> Accumulate payment into YTD interest paid
+        ADD LS-PAYMENT-AMT TO ACCT-YTD-INT-PAID
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-INT-RESULT-CODE
+                MOVE "Arithmetic overflow on YTD interest paid"
+                    TO LS-INT-RESULT-MSG
+                GOBACK
+        END-ADD
         *> After payment reset: accrued = 0 (today's interest paid out)
         MOVE ZEROS TO LS-NEW-ACCRUED
     ELSE

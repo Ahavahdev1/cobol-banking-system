@@ -137,6 +137,7 @@ MAIN-PROGRAM.
     PERFORM TEST-IE-F06 THRU TEST-IE-F06-EXIT
     PERFORM TEST-IE-F07 THRU TEST-IE-F07-EXIT
     PERFORM TEST-IE-F08 THRU TEST-IE-F08-EXIT
+    PERFORM TEST-IE-F09 THRU TEST-IE-F09-EXIT
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -894,4 +895,149 @@ TEST-IE-F08.
     ADD 1 TO WS-PASS-COUNT
     DISPLAY "  PASS: " WS-TEST-NAME.
 TEST-IE-F08-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> IE-F09: Hold blocks over-withdrawal (available balance check)
+*> Deposit $6000, place $4775 hold (non-local check), try $2000
+*> withdrawal. Available = $6000 - $4775 = $1225 < $2000 -> E0030
+*> This tests the critical TXNPOST0 <-> HOLDCALC0 interaction:
+*> TXNPOST0 checks ACCT-AVAIL-BAL (not ledger), so holds prevent
+*> over-withdrawal even when ledger balance is sufficient.
+*> ---------------------------------------------------------------
+TEST-IE-F09.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IE-F09: Hold blocks over-withdrawal"
+        TO WS-TEST-NAME
+
+    *> --- Step 1: Initialize checking account at $0
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-TXN-RECORD
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 900000000001 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "N" TO ACCT-OD-PROTECTION OF WS-ACCT-RECORD
+    MOVE "N" TO ACCT-OD-OPTED-IN OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 20250101 TO ACCT-OPEN-DATE OF WS-ACCT-RECORD
+
+    *> --- Step 2: Post $6000 deposit via TXNPOST0
+    MOVE 900000000001 TO TXN-ACCT-NUMBER OF WS-TXN-RECORD
+    MOVE "DEP" TO TXN-TYPE OF WS-TXN-RECORD
+    MOVE 6000.00 TO TXN-AMOUNT OF WS-TXN-RECORD
+    MOVE "C" TO TXN-DR-CR OF WS-TXN-RECORD
+    MOVE "BR" TO TXN-CHANNEL OF WS-TXN-RECORD
+    MOVE "CHECK DEPOSIT" TO TXN-DESCRIPTION OF WS-TXN-RECORD
+    MOVE 20260226 TO TXN-POST-DATE OF WS-TXN-RECORD
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE OF WS-TXN-RECORD
+    CALL "TXNPOST0" USING WS-TXN-RECORD
+                          WS-ACCT-RECORD
+                          WS-GL-ENTRIES
+                          WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " deposit TXNPOST0 result=" WS-TXN-RESULT-CODE
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    *> Verify ledger = $6000
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 6000.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " post-deposit ledger="
+            ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=6000.00"
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    *> --- Step 3: Place hold via HOLDCALC0 (non-local check $6000)
+    *> Reg CC: $225 next-day avail, remaining $5775 on hold
+    *> But we want $4775 hold, so we use the hold result to set it
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE WS-HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 900000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 6000.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "NL" TO WS-HR-CHECK-TYPE
+    MOVE 20260226 TO WS-HR-DEPOSIT-DATE
+    MOVE 20250101 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST
+                           WS-HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " HOLDCALC0 result=" WS-HOLD-RESULT-CODE
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    *> --- Step 4: Apply hold to account
+    *> Set hold amount = remaining amount from HOLDCALC0
+    *> For NL (non-local) check $6000: next-day=$225, remaining=$5775
+    *> Use the actual hold remaining from HOLDCALC0
+    MOVE WS-HOLD-REMAINING-AMT
+        TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    *> Recompute available balance = ledger - hold
+    COMPUTE ACCT-AVAIL-BAL OF WS-ACCT-RECORD =
+        ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+        - ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+
+    *> Verify available is less than $2000 (the withdrawal amount)
+    IF ACCT-AVAIL-BAL OF WS-ACCT-RECORD >= 2000.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " avail=" ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+            " should be < 2000.00 for test to be valid"
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    *> --- Step 5: Attempt $2000 withdrawal - should FAIL
+    *> Available = ledger($6000) - hold(remaining) < $2000
+    INITIALIZE WS-TXN-RECORD
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 900000000001 TO TXN-ACCT-NUMBER OF WS-TXN-RECORD
+    MOVE "WDL" TO TXN-TYPE OF WS-TXN-RECORD
+    MOVE 2000.00 TO TXN-AMOUNT OF WS-TXN-RECORD
+    MOVE "D" TO TXN-DR-CR OF WS-TXN-RECORD
+    MOVE "BR" TO TXN-CHANNEL OF WS-TXN-RECORD
+    MOVE "WITHDRAWAL" TO TXN-DESCRIPTION OF WS-TXN-RECORD
+    MOVE 20260226 TO TXN-POST-DATE OF WS-TXN-RECORD
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE OF WS-TXN-RECORD
+    CALL "TXNPOST0" USING WS-TXN-RECORD
+                          WS-ACCT-RECORD
+                          WS-GL-ENTRIES
+                          WS-TXN-RESULT
+
+    *> Verify E0030 insufficient available funds
+    IF WS-TXN-RESULT-CODE NOT = "E0030"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " withdrawal result=" WS-TXN-RESULT-CODE
+            " expected=E0030 (insufficient available funds)"
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    *> Verify ledger balance UNCHANGED at $6000
+    IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD NOT = 6000.00
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " ledger=" ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            " expected=6000.00 (unchanged)"
+        GO TO TEST-IE-F09-EXIT
+    END-IF
+
+    ADD 1 TO WS-PASS-COUNT
+    DISPLAY "  PASS: " WS-TEST-NAME.
+TEST-IE-F09-EXIT.
     CONTINUE.

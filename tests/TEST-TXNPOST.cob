@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (35 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (36 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -66,6 +66,7 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-033
     PERFORM TEST-TP-034
     PERFORM TEST-TP-035
+    PERFORM TEST-TP-037
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1204,4 +1205,41 @@ TEST-TP-035.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0037 actual=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-037: Credit to legal-hold account -> E0000 (success)
+*>         Legal hold only blocks debits, not credits
+*> ---------------------------------------------------------------
+TEST-TP-037.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-037: Credit to legal-hold acct=E0000"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE "Y" TO ACCT-LEGAL-HOLD
+    MOVE 1000.00 TO ACCT-LEDGER-BAL
+    MOVE "C" TO TXN-DR-CR
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 500.00 TO TXN-CASH-AMOUNT
+    COMPUTE WS-EXPECTED-BAL = 1000.00 + 500.00
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000"
     END-IF.

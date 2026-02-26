@@ -49,6 +49,9 @@ COPY CPYAUDT.
 01  WS-LEAP-REM100             PIC 9(4).
 01  WS-LEAP-REM400             PIC 9(4).
 
+*> Year-end detection
+01  WS-BATCH-MM               PIC 9(2).
+
 *> Batch counters
 01  WS-ACCTS-PROCESSED       PIC 9(8) VALUE 0.
 01  WS-ACCTS-ERRORS          PIC 9(8) VALUE 0.
@@ -173,6 +176,7 @@ EOM-POST-FEE.
                           WS-GL-ENTRIES
                           WS-TXN-RESULT
     IF WS-TXN-RESULT-CODE NOT = "E0000"
+        SUBTRACT WS-FEE-ASSESSED FROM WS-TOTAL-FEES-ASSESSED
         ADD 1 TO WS-ACCTS-ERRORS
     END-IF.
 
@@ -184,7 +188,18 @@ EOM-RESET-MTD.
     MOVE 0 TO ACCT-NSF-COUNT-TODAY
     MOVE 0 TO ACCT-OL-TXN-COUNT-MTD
     MOVE 0 TO ACCT-MTD-AVG-BAL
-    MOVE 0 TO ACCT-MTD-LOW-BAL.
+    MOVE 0 TO ACCT-MTD-LOW-BAL
+    *> Year-end reset: if processing December, reset YTD counters
+    COMPUTE WS-BATCH-MM =
+        FUNCTION MOD(
+            FUNCTION INTEGER-PART(LS-BATCH-DATE / 100), 100)
+    IF WS-BATCH-MM = 12
+        MOVE 0 TO ACCT-NSF-COUNT-YTD
+        MOVE 0 TO ACCT-YTD-FEES-CHARGED
+        MOVE 0 TO ACCT-YTD-FEES-WAIVED
+        MOVE 0 TO ACCT-YTD-INT-EARNED
+        MOVE 0 TO ACCT-YTD-INT-PAID
+    END-IF.
 
 *> ---------------------------------------------------------------
 *> Log EOM processing to audit trail
