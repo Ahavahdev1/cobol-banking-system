@@ -65,6 +65,7 @@ MAIN-PROGRAM.
     PERFORM TEST-IC-026
     PERFORM TEST-IC-027
     PERFORM TEST-IC-028
+    PERFORM TEST-IC-029
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1098,4 +1099,32 @@ TEST-IC-028.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-029: Escheated account -> E0044 (no interest accrual)
+*> Funds turned over to state; interest must stop accruing
+*> ---------------------------------------------------------------
+TEST-IC-029.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-029: Escheated acct -> E0044"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "E" TO ACCT-STATUS
+    MOVE 20260315 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0044"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE " expected=E0044"
     END-IF.

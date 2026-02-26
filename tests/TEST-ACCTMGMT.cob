@@ -55,6 +55,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-027
     PERFORM TEST-AM-028
     PERFORM TEST-AM-029
+    PERFORM TEST-AM-030
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -918,4 +919,38 @@ TEST-AM-029.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0049 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-030: CLOS negative ledger balance -> E0016
+*> Account with overdraft balance should not be closable
+*> ---------------------------------------------------------------
+TEST-AM-030.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-030: CLOS negative bal -> E0016" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE -500.00 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE 0 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE 0 TO ACCT-ACCRUED-INT
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "N" TO ACCT-GARNISHMENT
+    MOVE 0 TO ACCT-PAST-DUE-AMT
+    MOVE 0 TO ACCT-ESCROW-BAL
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0016"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0016 actual=" WS-ACCT-RESULT-CODE
     END-IF.

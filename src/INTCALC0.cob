@@ -44,6 +44,12 @@ MAIN-LOGIC.
         MOVE "Account is closed" TO LS-INT-RESULT-MSG
         GOBACK
     END-IF
+    *> Escheated accounts: funds turned over to state, no accrual
+    IF ACCT-STATUS = "E"
+        MOVE "E0044" TO LS-INT-RESULT-CODE
+        MOVE "Account is escheated" TO LS-INT-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Check CD past maturity
     IF ACCT-SUB-TYPE = "CD"
