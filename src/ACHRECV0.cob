@@ -298,6 +298,9 @@ CHECK-REG-D.
         MOVE "R09" TO LS-ACH-RETURN-CODE
         MOVE "REG D TRANSFER LIMIT EXCEEDED"
             TO LS-ACH-RETURN-REASON
+    END-IF
+    IF WS-RD-ALLOWED = "Y"
+        MOVE WS-RD-NEW-COUNT TO ACCT-OL-TXN-COUNT-MTD
     END-IF.
 
 *> ---------------------------------------------------------------

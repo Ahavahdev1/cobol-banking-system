@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (19 tests)
+*> Tests: Payments, late checks, payoff, edge cases (22 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +49,9 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-017
     PERFORM TEST-LP-026
     PERFORM TEST-LP-027
+    PERFORM TEST-LP-028
+    PERFORM TEST-LP-029
+    PERFORM TEST-LP-030
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -690,4 +693,96 @@ TEST-LP-027.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-028: Jan 31 next-pmt-date caps to Feb 28 (non-leap year)
+*>         2026 is not a leap year: 20260131 + 1 month = 20260228
+*> ---------------------------------------------------------------
+TEST-LP-028.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-028: Jan31 next-pmt caps to Feb28 non-leap"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE 20260131 TO ACCT-NEXT-PMT-DATE
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260131 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-NEXT-PMT-DATE = 20260228
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " next-pmt=" ACCT-NEXT-PMT-DATE
+                " expected=20260228"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-029: Jan 31 next-pmt-date caps to Feb 29 in leap year
+*>         2028 is a leap year: 20280131 + 1 month = 20280229
+*> ---------------------------------------------------------------
+TEST-LP-029.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-029: Jan31 next-pmt caps to Feb29 leap yr"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE 20280131 TO ACCT-NEXT-PMT-DATE
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20280131 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-NEXT-PMT-DATE = 20280229
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " next-pmt=" ACCT-NEXT-PMT-DATE
+                " expected=20280229"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-030: POFF on closed account returns E0011
+*> ---------------------------------------------------------------
+TEST-LP-030.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-030: POFF closed account -> E0011"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "C" TO ACCT-STATUS
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "POFF" TO WS-LOAN-FUNCTION
+    MOVE ZERO TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0011"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0011 actual=" WS-LOAN-RESULT-CODE
     END-IF.

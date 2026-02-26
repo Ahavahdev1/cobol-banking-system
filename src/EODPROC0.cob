@@ -105,6 +105,7 @@ COPY CPYAUDT.
 *> Rollback fields for interest posting failure
 01  WS-SAVE-ACCRUED-INT        PIC S9(11)V9(6).
 01  WS-SAVE-YTD-INT-PAID       PIC S9(11)V99.
+01  WS-SAVE-YTD-INT-EARNED     PIC S9(11)V99.
 
 *> Batch control
 01  WS-ACCTS-PROCESSED        PIC 9(8) VALUE 0.
@@ -216,11 +217,18 @@ EOD-ACCRUE-INTEREST.
     *> Save pre-INTCALC0 values for rollback if payment posting fails
     MOVE ACCT-ACCRUED-INT TO WS-SAVE-ACCRUED-INT
     MOVE ACCT-YTD-INT-PAID TO WS-SAVE-YTD-INT-PAID
+    MOVE ACCT-YTD-INT-EARNED TO WS-SAVE-YTD-INT-EARNED
     CALL "INTCALC0" USING ACCT-RECORD
                           LS-BATCH-DATE
                           WS-INT-RESULT
     IF WS-INT-RESULT-CODE = "E0000"
         ADD WS-DAILY-INT-AMT TO WS-TOTAL-INT-ACCRUED
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-BATCH-RESULT-CODE
+                MOVE "Arithmetic overflow on total interest accrued"
+                    TO LS-BATCH-RESULT-MSG
+                GOBACK
+        END-ADD
     ELSE
         ADD 1 TO WS-ACCTS-ERRORS
     END-IF.
@@ -246,12 +254,19 @@ EOD-POST-INTEREST-PAYMENT.
                           WS-TXN-RESULT
     IF WS-TXN-RESULT-CODE = "E0000"
         ADD WS-PAYMENT-AMT TO WS-TOTAL-INT-PAID
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-BATCH-RESULT-CODE
+                MOVE "Arithmetic overflow on total interest paid"
+                    TO LS-BATCH-RESULT-MSG
+                GOBACK
+        END-ADD
         PERFORM ADVANCE-NEXT-PAY-DATE
     ELSE
         *> Rollback: restore pre-INTCALC0 accrued interest + today
         MOVE WS-SAVE-ACCRUED-INT TO ACCT-ACCRUED-INT
         ADD WS-DAILY-INT-AMT TO ACCT-ACCRUED-INT
         MOVE WS-SAVE-YTD-INT-PAID TO ACCT-YTD-INT-PAID
+        MOVE WS-SAVE-YTD-INT-EARNED TO ACCT-YTD-INT-EARNED
         ADD 1 TO WS-ACCTS-ERRORS
     END-IF.
 
@@ -361,7 +376,7 @@ EOD-RELEASE-HOLDS.
             *> Hold has not yet matured; skip release
             CONTINUE
         ELSE
-            SUBTRACT ACCT-HOLD-AMOUNT FROM ACCT-HOLD-AMOUNT
+            MOVE 0 TO ACCT-HOLD-AMOUNT
             COMPUTE ACCT-AVAIL-BAL =
                 ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
                 ON SIZE ERROR

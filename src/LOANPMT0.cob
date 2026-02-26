@@ -130,6 +130,12 @@ PROCESS-PAYMENT.
         MOVE ZERO TO ACCT-PAST-DUE-AMT
     ELSE
         SUBTRACT LS-PAYMENT-AMT FROM ACCT-PAST-DUE-AMT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Arithmetic overflow on past due reduction"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
     END-IF
     *> Update next payment date (add 1 month: +100 to YYYYMMDD)
     IF ACCT-NEXT-PMT-DATE > 0

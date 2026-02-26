@@ -276,10 +276,7 @@ PROCESS-REVERSE.
                     TO LS-WIRE-RESULT-MSG
                 GOBACK
         END-COMPUTE
-    END-IF
-
-    *> If outgoing wire was debited, add back to balance
-    IF WIRE-TYPE = "O"
+    ELSE IF WIRE-TYPE = "O"
         ADD WIRE-AMOUNT TO ACCT-LEDGER-BAL
             ON SIZE ERROR
                 MOVE "E0040" TO LS-WIRE-RESULT-CODE
@@ -295,6 +292,12 @@ PROCESS-REVERSE.
                     TO LS-WIRE-RESULT-MSG
                 GOBACK
         END-COMPUTE
+    ELSE
+        MOVE "E0037" TO LS-WIRE-RESULT-CODE
+        MOVE "Invalid wire type for reversal"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
     END-IF
 
     *> Set wire status to reversed

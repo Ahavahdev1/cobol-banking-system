@@ -123,6 +123,12 @@ DO-FILE-DISPUTE.
     *> Assign dispute ID (auto-increment)
     MOVE WS-NEXT-DISPUTE-ID TO DSP-DISPUTE-ID
     ADD 1 TO WS-NEXT-DISPUTE-ID
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-DSP-RESULT-CODE
+            MOVE "Arithmetic overflow on dispute ID"
+                TO LS-DSP-RESULT-MSG
+            GOBACK
+    END-ADD
 
     MOVE "E0000" TO LS-DSP-RESULT-CODE
     MOVE "Dispute filed successfully" TO LS-DSP-RESULT-MSG.
@@ -250,6 +256,12 @@ DO-RESOLVE-DISPUTE.
             IF DSP-PROVISIONAL-AMT > DSP-TXN-AMOUNT
                 COMPUTE WS-REVERSE-AMT =
                     DSP-PROVISIONAL-AMT - DSP-TXN-AMOUNT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-DSP-RESULT-CODE
+                        MOVE "Arithmetic overflow on partial reversal"
+                            TO LS-DSP-RESULT-MSG
+                        GOBACK
+                END-COMPUTE
                 SUBTRACT WS-REVERSE-AMT FROM ACCT-LEDGER-BAL
                     ON SIZE ERROR
                         MOVE "E0040" TO LS-DSP-RESULT-CODE

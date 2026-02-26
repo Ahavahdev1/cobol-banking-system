@@ -8,6 +8,7 @@ PROGRAM-ID. GLPOST0.
 
 DATA DIVISION.
 WORKING-STORAGE SECTION.
+01  WS-SAVE-GL-BAL               PIC S9(15)V99.
 
 LINKAGE SECTION.
 01  LS-FUNCTION                   PIC X(4).
@@ -85,6 +86,7 @@ POST-GL-ENTRY.
     EVALUATE GL-NORMAL-BALANCE
         WHEN "D"
             *> Debit-normal account (Asset, Expense)
+            MOVE GL-CURRENT-BAL TO WS-SAVE-GL-BAL
             ADD LS-GLE-AMOUNT TO GL-CURRENT-BAL
                 ON SIZE ERROR
                     MOVE "E0040" TO LS-GL-RESULT-CODE
@@ -94,6 +96,7 @@ POST-GL-ENTRY.
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
                 ON SIZE ERROR
+                    MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                     MOVE "E0040" TO LS-GL-RESULT-CODE
                     MOVE "Arithmetic overflow on MTD accumulator"
                         TO LS-GL-RESULT-MSG
@@ -101,6 +104,7 @@ POST-GL-ENTRY.
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
                 ON SIZE ERROR
+                    MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                     MOVE "E0040" TO LS-GL-RESULT-CODE
                     MOVE "Arithmetic overflow on YTD accumulator"
                         TO LS-GL-RESULT-MSG
@@ -110,6 +114,7 @@ POST-GL-ENTRY.
             *> Credit-normal account (Liability, Income, Equity)
             IF LS-GLE-DR-ACCT > LS-GLE-CR-ACCT
                 *> Contra entry: credit-normal on DR side
+                MOVE GL-CURRENT-BAL TO WS-SAVE-GL-BAL
                 SUBTRACT LS-GLE-AMOUNT FROM GL-CURRENT-BAL
                     ON SIZE ERROR
                         MOVE "E0040" TO LS-GL-RESULT-CODE
@@ -119,6 +124,7 @@ POST-GL-ENTRY.
                 END-SUBTRACT
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
                     ON SIZE ERROR
+                        MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on MTD accumulator"
                             TO LS-GL-RESULT-MSG
@@ -126,6 +132,7 @@ POST-GL-ENTRY.
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
                     ON SIZE ERROR
+                        MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on YTD accumulator"
                             TO LS-GL-RESULT-MSG
@@ -133,6 +140,7 @@ POST-GL-ENTRY.
                 END-ADD
             ELSE
                 *> Normal entry: credit-normal on CR side
+                MOVE GL-CURRENT-BAL TO WS-SAVE-GL-BAL
                 ADD LS-GLE-AMOUNT TO GL-CURRENT-BAL
                     ON SIZE ERROR
                         MOVE "E0040" TO LS-GL-RESULT-CODE
@@ -142,6 +150,7 @@ POST-GL-ENTRY.
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
                     ON SIZE ERROR
+                        MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on MTD accumulator"
                             TO LS-GL-RESULT-MSG
@@ -149,6 +158,7 @@ POST-GL-ENTRY.
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
                     ON SIZE ERROR
+                        MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on YTD accumulator"
                             TO LS-GL-RESULT-MSG

@@ -95,6 +95,11 @@ VALIDATE-ACCOUNT-STATUS.
         MOVE "Account is closed" TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-TXN-RESULT-CODE
+        MOVE "Account is escheated" TO LS-TXN-RESULT-MSG
+        GOBACK
+    END-IF
     *> Legal hold check - also covers OFAC-flagged accounts
     IF ACCT-LEGAL-HOLD = "Y" AND TXN-DR-CR = "D"
         MOVE "E0035" TO LS-TXN-RESULT-CODE

@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (12 tests)
+*>        batch status, multi-account, error paths (15 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -23,6 +23,8 @@ COPY CPYBATCH.
 
 01  WS-SAVED-ACCRUED       PIC S9(11)V9(6).
 01  WS-SAVED-LEDGER-BAL    PIC S9(13)V99.
+01  WS-SAVED-YTD-INT-PAID  PIC S9(11)V99.
+01  WS-SAVED-YTD-INT-EARN  PIC S9(11)V99.
 
 PROCEDURE DIVISION.
 MAIN-PROGRAM.
@@ -42,6 +44,9 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-010
     PERFORM TEST-BE-011
     PERFORM TEST-BE-012
+    PERFORM TEST-BE-013
+    PERFORM TEST-BE-014
+    PERFORM TEST-BE-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -397,4 +402,144 @@ TEST-BE-012.
             " date=" BATCH-DATE
             " status=" BATCH-STATUS
             " expected date=20260226 status=P"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-013 (EOD-007): Interest payment rollback on posting failure
+*> Trigger: Active account with ACCT-DECEASED = "Y". EODPROC0
+*> processes status "A", INTCALC0 succeeds and flags payment due,
+*> but TXNPOST0 rejects with E0036 (deceased). Rollback restores
+*> accrued interest (pre-INTCALC0 + today's accrual) and
+*> YTD-INT-PAID to its pre-INTCALC0 value.
+*> ---------------------------------------------------------------
+TEST-BE-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-013: Interest payment rollback on post fail"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    *> Active account so EODPROC0 processes it
+    MOVE "A" TO ACCT-STATUS
+    *> Set deceased flag - TXNPOST0 will reject with E0036
+    MOVE "Y" TO ACCT-DECEASED
+    *> Pre-existing accrued interest before this EOD run
+    MOVE 50.000000 TO ACCT-ACCRUED-INT
+    *> Set payment date = today so INTCALC0 flags payment due
+    MOVE 20260226 TO ACCT-INT-NEXT-PAY-DATE
+    *> Known YTD values before EOD
+    MOVE 100.00 TO ACCT-YTD-INT-PAID
+    MOVE 200.00 TO ACCT-YTD-INT-EARNED
+    *> Save pre-EOD values for verification
+    MOVE ACCT-ACCRUED-INT TO WS-SAVED-ACCRUED
+    MOVE ACCT-YTD-INT-PAID TO WS-SAVED-YTD-INT-PAID
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> After rollback:
+    *> - ACCT-ACCRUED-INT = pre-INTCALC0 value + today's accrual
+    *>   (rollback restores saved accrued then adds daily interest)
+    *> - ACCT-YTD-INT-PAID = pre-INTCALC0 value (rollback restores)
+    *>   Note: INTCALC0 adds payment to YTD-INT-PAID on payment due,
+    *>   but rollback reverts it to saved value
+    *> - Ledger balance unchanged (TXNPOST0 never posted)
+    *> - Batch has errors (status P)
+    IF ACCT-LEDGER-BAL = WS-SAVED-LEDGER-BAL
+        AND ACCT-ACCRUED-INT > WS-SAVED-ACCRUED
+        AND ACCT-YTD-INT-PAID = WS-SAVED-YTD-INT-PAID
+        AND BATCH-ACCTS-ERRORS > 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+            " accrued=" ACCT-ACCRUED-INT
+            " ytd-paid=" ACCT-YTD-INT-PAID
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " bal=" ACCT-LEDGER-BAL
+            " accrued=" ACCT-ACCRUED-INT
+            " ytd-paid=" ACCT-YTD-INT-PAID
+            " errors=" BATCH-ACCTS-ERRORS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-014 (EOD-008): Quarterly payment frequency date advancement
+*> Active account with PAY-FREQ = "Q", next pay date = batch date.
+*> After EOD: interest paid, next pay date advanced by 3 months.
+*> ---------------------------------------------------------------
+TEST-BE-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-014: Quarterly freq advances +3 months"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "Q" TO ACCT-INT-PAY-FREQ
+    MOVE 20261115 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 41.100000 TO ACCT-ACCRUED-INT
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20261115 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-INT-NEXT-PAY-DATE = 20270215
+            AND ACCT-LEDGER-BAL > WS-SAVED-LEDGER-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " next-pay=" ACCT-INT-NEXT-PAY-DATE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " next-pay=" ACCT-INT-NEXT-PAY-DATE
+                " expected=20270215"
+                " bal=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-015 (EOD-009): Annual payment frequency with year rollover
+*> Active account with PAY-FREQ = "A", next pay date = 20260315.
+*> After EOD with batch date 20260315: next pay date = 20270315.
+*> ---------------------------------------------------------------
+TEST-BE-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-015: Annual freq advances +12 months"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "A" TO ACCT-INT-PAY-FREQ
+    MOVE 20260315 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 125.500000 TO ACCT-ACCRUED-INT
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260315 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-INT-NEXT-PAY-DATE = 20270315
+            AND ACCT-LEDGER-BAL > WS-SAVED-LEDGER-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " next-pay=" ACCT-INT-NEXT-PAY-DATE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " next-pay=" ACCT-INT-NEXT-PAY-DATE
+                " expected=20270315"
+                " bal=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
     END-IF.
