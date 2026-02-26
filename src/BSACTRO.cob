@@ -70,16 +70,16 @@ DO-CHEK.
         GOBACK
     END-IF
 
-    IF LS-BSA-CASH-AMOUNT >= WS-CTR-THRESHOLD
+    IF LS-BSA-CASH-AMOUNT > WS-CTR-THRESHOLD
         MOVE "Y" TO LS-BSA-CTR-REQUIRED
         MOVE "CTR required" TO LS-BSA-RESULT-MSG
     END-IF
     *> Also check aggregated CTR-RECORD totals
-    IF CTR-CASH-IN-TOTAL >= WS-CTR-THRESHOLD
+    IF CTR-CASH-IN-TOTAL > WS-CTR-THRESHOLD
         MOVE "Y" TO LS-BSA-CTR-REQUIRED
         MOVE "CTR required - aggregate" TO LS-BSA-RESULT-MSG
     END-IF
-    IF CTR-CASH-OUT-TOTAL >= WS-CTR-THRESHOLD
+    IF CTR-CASH-OUT-TOTAL > WS-CTR-THRESHOLD
         MOVE "Y" TO LS-BSA-CTR-REQUIRED
         MOVE "CTR required - aggregate" TO LS-BSA-RESULT-MSG
     END-IF
@@ -112,38 +112,43 @@ DO-AGGR.
     END-IF
 
     IF LS-BSA-IS-CASH = "Y"
-        IF LS-BSA-CASH-DIRECTION = "I"
-            ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-IN-TOTAL
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-BSA-RESULT-CODE
-                    MOVE "Arithmetic overflow on cash-in"
-                        TO LS-BSA-RESULT-MSG
-                    GOBACK
-            END-ADD
-            ADD 1 TO CTR-CASH-IN-COUNT
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-BSA-RESULT-CODE
-                    MOVE "Arithmetic overflow on cash-in count"
-                        TO LS-BSA-RESULT-MSG
-                    GOBACK
-            END-ADD
-        END-IF
-        IF LS-BSA-CASH-DIRECTION = "O"
-            ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-OUT-TOTAL
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-BSA-RESULT-CODE
-                    MOVE "Arithmetic overflow on cash-out"
-                        TO LS-BSA-RESULT-MSG
-                    GOBACK
-            END-ADD
-            ADD 1 TO CTR-CASH-OUT-COUNT
-                ON SIZE ERROR
-                    MOVE "E0040" TO LS-BSA-RESULT-CODE
-                    MOVE "Arithmetic overflow on cash-out count"
-                        TO LS-BSA-RESULT-MSG
-                    GOBACK
-            END-ADD
-        END-IF
+        EVALUATE LS-BSA-CASH-DIRECTION
+            WHEN "I"
+                ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-IN-TOTAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-BSA-RESULT-CODE
+                        MOVE "Arithmetic overflow on cash-in"
+                            TO LS-BSA-RESULT-MSG
+                        GOBACK
+                END-ADD
+                ADD 1 TO CTR-CASH-IN-COUNT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-BSA-RESULT-CODE
+                        MOVE "Arithmetic overflow on cash-in count"
+                            TO LS-BSA-RESULT-MSG
+                        GOBACK
+                END-ADD
+            WHEN "O"
+                ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-OUT-TOTAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-BSA-RESULT-CODE
+                        MOVE "Arithmetic overflow on cash-out"
+                            TO LS-BSA-RESULT-MSG
+                        GOBACK
+                END-ADD
+                ADD 1 TO CTR-CASH-OUT-COUNT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-BSA-RESULT-CODE
+                        MOVE "Arithmetic overflow on cash-out count"
+                            TO LS-BSA-RESULT-MSG
+                        GOBACK
+                END-ADD
+            WHEN OTHER
+                MOVE "E0089" TO LS-BSA-RESULT-CODE
+                MOVE "Invalid cash direction (must be I or O)"
+                    TO LS-BSA-RESULT-MSG
+                GOBACK
+        END-EVALUATE
     END-IF
 
     MOVE CTR-CASH-IN-TOTAL TO LS-BSA-CASH-IN-TOTAL

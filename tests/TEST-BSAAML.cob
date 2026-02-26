@@ -4,7 +4,7 @@ PROGRAM-ID. TEST-BSAAML.
 *> TEST-BSAAML - Test suite for BSACTRO BSA/AML CTR Generator
 *> Tests: CTR threshold, aggregation, exemptions, cash direction,
 *> structuring boundary detection, cross-account aggregation
-*> 14 tests (BA-001 to BA-014)
+*> 15 tests (BA-001 to BA-015)
 *> ================================================================
 
 DATA DIVISION.
@@ -54,6 +54,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BA-012
     PERFORM TEST-BA-013
     PERFORM TEST-BA-014
+    PERFORM TEST-BA-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -64,11 +65,13 @@ MAIN-PROGRAM.
     STOP RUN.
 
 *> ---------------------------------------------------------------
-*> BA-001: CHEK - cash $10,000.00 exactly -> CTR required (Y)
+*> BA-001: CHEK - cash $10,000.00 exactly -> CTR NOT required
+*> BSA 31 CFR 1010.311: CTR for cash "in excess of" $10,000
 *> ---------------------------------------------------------------
 TEST-BA-001.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "BA-001: Cash $10K exactly -> CTR req" TO WS-TEST-NAME
+    MOVE "BA-001: Cash $10K exactly -> no CTR"
+        TO WS-TEST-NAME
     INITIALIZE CTR-RECORD
     INITIALIZE WS-TXN-INFO
     INITIALIZE WS-BSA-RESULT
@@ -83,13 +86,13 @@ TEST-BA-001.
     CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
                          WS-TXN-INFO WS-BSA-RESULT
     IF WS-BSA-RESULT-CODE = "E0000"
-        IF WS-BSA-CTR-REQUIRED = "Y"
+        IF WS-BSA-CTR-REQUIRED = "N"
             ADD 1 TO WS-PASS-COUNT
             DISPLAY "  PASS: " WS-TEST-NAME
         ELSE
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
-                " CTR=" WS-BSA-CTR-REQUIRED " expected=Y"
+                " CTR=" WS-BSA-CTR-REQUIRED " expected=N"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
@@ -617,4 +620,32 @@ TEST-BA-014.
                 " rc=" WS-BSA-RESULT-CODE
                 " expected=E0002"
         END-IF
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-015: AGGR invalid cash direction -> E0089
+*> ---------------------------------------------------------------
+TEST-BA-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-015: AGGR invalid direction -> E0089"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "AGGR" TO WS-FUNCTION
+    MOVE 1000000001 TO WS-BSA-CUST-ID
+    MOVE 20260215 TO WS-BSA-TXN-DATE
+    MOVE 5000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "X" TO WS-BSA-CASH-DIRECTION
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 100000000001 TO WS-BSA-ACCT-NUMBER
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0089"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE " expected=E0089"
     END-IF.

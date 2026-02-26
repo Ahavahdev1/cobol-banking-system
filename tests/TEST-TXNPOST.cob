@@ -544,11 +544,13 @@ TEST-TP-015.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> TP-016: CTR flag on cash deposit exactly $10,000.00 -> Y
+*> TP-016: CTR flag on cash $10,000.00 exactly -> N (not in excess)
+*> BSA 31 CFR 1010.311: CTR for cash "in excess of" $10,000
 *> ---------------------------------------------------------------
 TEST-TP-016.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "TP-016: CTR $10000=Y" TO WS-TEST-NAME
+    MOVE "TP-016: CTR $10000=N (not excess)"
+        TO WS-TEST-NAME
     PERFORM SETUP-ACTIVE-CHECKING
     PERFORM SETUP-DEPOSIT-TXN
     INITIALIZE WS-GL-ENTRIES
@@ -558,13 +560,13 @@ TEST-TP-016.
     CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
                           WS-GL-ENTRIES WS-TXN-RESULT
     IF WS-TXN-RESULT-CODE = "E0000"
-        IF TXN-CTR-REPORTABLE = "Y"
+        IF TXN-CTR-REPORTABLE = "N"
             ADD 1 TO WS-PASS-COUNT
             DISPLAY "  PASS: " WS-TEST-NAME
         ELSE
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
-                " CTR=" TXN-CTR-REPORTABLE
+                " CTR=" TXN-CTR-REPORTABLE " expected=N"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

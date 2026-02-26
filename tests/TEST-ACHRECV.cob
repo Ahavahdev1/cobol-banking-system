@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
 *> Tests: ACH credits, debits, returns, batch validation,
-*>        edge cases, overflow, OFAC screening (31 tests)
+*>        edge cases, overflow, OFAC screening (32 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -80,6 +80,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-029
     PERFORM TEST-AR-030
     PERFORM TEST-AR-031
+    PERFORM TEST-AR-032
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1745,4 +1746,60 @@ TEST-AR-031.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-032: ACH debit to garnished account -> return R16
+*> Garnished accounts block debits to preserve funds for court order
+*> ---------------------------------------------------------------
+TEST-AR-032.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-032: ACH debit garnished acct -> R16"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000032" TO WS-ACH-ACCT-NUMBER
+    MOVE 500.00 TO WS-ACH-AMOUNT
+    MOVE "GARNISHED ACCT DBT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000032" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 500.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Active account with garnishment flag
+    MOVE 100000000032 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    MOVE "Y" TO ACCT-GARNISHMENT OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RETURN-FLAG = "Y"
+        IF WS-ACH-RETURN-CODE = "R16"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " return-code=" WS-ACH-RETURN-CODE
+                " expected=R16"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
     END-IF.

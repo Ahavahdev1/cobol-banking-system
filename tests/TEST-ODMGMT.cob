@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ODMGMT.
 *> ================================================================
 *> TEST-ODMGMT - Test suite for ODMGMT0 Overdraft Management
 *> Tests: Reg E opt-in, OD limits, protection transfers, NSF caps,
-*>        de minimis, acct type/status (18 tests OD-001 to OD-018)
+*>        de minimis, acct type/status (19 tests OD-001 to OD-019)
 *> ================================================================
 
 DATA DIVISION.
@@ -54,6 +54,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-016
     PERFORM TEST-OD-017
     PERFORM TEST-OD-018
+    PERFORM TEST-OD-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -769,4 +770,55 @@ TEST-OD-018.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE " expected=E0044"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-019: De minimis OD does NOT increment NSF counts
+*> OD amount $4.99 < de minimis $5.00 -> fee=0, counts unchanged
+*> ---------------------------------------------------------------
+TEST-OD-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-019: De minimis no NSF count incr"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 0 TO ACCT-NSF-COUNT-YTD
+    *> OD amount = balance - txn = 100 - 104.99 = 4.99 (de minimis)
+    MOVE 104.99 TO WS-OD-TXN-AMOUNT
+    MOVE "AT" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0000"
+        IF WS-OD-APPROVED = "Y"
+            AND WS-OD-FEE-ASSESSED = 0
+            AND ACCT-NSF-COUNT-TODAY = 0
+            AND ACCT-NSF-COUNT-MTD = 0
+            AND ACCT-NSF-COUNT-YTD = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " fee=" WS-OD-FEE-ASSESSED
+                " today=" ACCT-NSF-COUNT-TODAY
+                " mtd=" ACCT-NSF-COUNT-MTD
+                " ytd=" ACCT-NSF-COUNT-YTD
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
     END-IF.

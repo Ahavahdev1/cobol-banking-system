@@ -220,6 +220,13 @@ CHECK-ACCOUNT.
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R08" TO LS-ACH-RETURN-CODE
         MOVE "STOP PAYMENT ON ITEM" TO LS-ACH-RETURN-REASON
+    *> Check for garnishment on debits (preserve funds for court order)
+    ELSE IF ACCT-GARNISHMENT = "Y"
+        AND WS-IS-DEBIT = "Y"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R16" TO LS-ACH-RETURN-CODE
+        MOVE "ACCOUNT UNDER GARNISHMENT" TO LS-ACH-RETURN-REASON
+    END-IF
     END-IF
     END-IF
     END-IF

@@ -182,7 +182,10 @@ PROCESS-NSF-FEE.
     END-ADD
     ADD FEE-AMOUNT TO ACCT-YTD-FEES-CHARGED
         ON SIZE ERROR
-            CONTINUE
+            MOVE "E0040" TO LS-FEE-RESULT-CODE
+            MOVE "Arithmetic overflow on YTD fees charged"
+                TO LS-FEE-RESULT-MSG
+            GO TO PROCESS-NSF-FEE-EXIT
     END-ADD
     MOVE "NSF fee assessed" TO LS-FEE-RESULT-MSG.
 

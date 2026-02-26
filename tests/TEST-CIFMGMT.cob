@@ -302,7 +302,7 @@ TEST-CF-008.
             AND CIF-BSA-RISK-RATING = 1
             AND CIF-OFAC-STATUS = "C"
             AND CIF-CTR-EXEMPT = "N"
-            AND CIF-COUNTRY = "US"
+            AND CIF-COUNTRY = "USA"
             ADD 1 TO WS-PASS-COUNT
             DISPLAY "  PASS: " WS-TEST-NAME
         ELSE

@@ -280,7 +280,7 @@ DETERMINE-DEPOSIT-GL.
 *> Check if cash amount triggers CTR reporting
 *> ---------------------------------------------------------------
 CHECK-CTR.
-    IF TXN-CASH-AMOUNT >= WS-CTR-THRESHOLD
+    IF TXN-CASH-AMOUNT > WS-CTR-THRESHOLD
         MOVE "Y" TO TXN-CTR-REPORTABLE
     ELSE
         MOVE "N" TO TXN-CTR-REPORTABLE

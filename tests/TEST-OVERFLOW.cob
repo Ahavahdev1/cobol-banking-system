@@ -363,7 +363,7 @@ TEST-OV-006.
 
 *> ---------------------------------------------------------------
 *> OV-007: INTCALC0 YTD interest earned overflow
-*> ACCT-YTD-INT-EARNED PIC S9(11)V99 max = 99999999999.99
+*> ACCT-YTD-INT-EARNED PIC S9(11)V9(6) max = 99999999999.999999
 *> Set near max, small daily interest causes overflow -> E0040
 *> ---------------------------------------------------------------
 TEST-OV-007.

@@ -32,9 +32,11 @@
         10  ACCT-PENDING-CR        PIC S9(13)V99.
         10  ACCT-ACCRUED-INT       PIC S9(11)V9(6).
         *> 6 decimal places for interest precision
-        10  ACCT-YTD-INT-EARNED    PIC S9(11)V99.
+        10  ACCT-YTD-INT-EARNED    PIC S9(11)V9(6).
+        *> 6dp to match ACCT-ACCRUED-INT precision (no truncation drift)
         10  ACCT-YTD-INT-PAID      PIC S9(11)V99.
-        10  ACCT-PTD-INT-EARNED    PIC S9(11)V99.
+        10  ACCT-PTD-INT-EARNED    PIC S9(11)V9(6).
+        *> 6dp to match ACCT-ACCRUED-INT precision
         10  ACCT-MTD-AVG-BAL       PIC S9(13)V99.
         10  ACCT-MTD-LOW-BAL       PIC S9(13)V99.
     05  ACCT-INTEREST-PARAMS.

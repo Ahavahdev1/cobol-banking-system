@@ -134,21 +134,21 @@ ODMGMT0-MAIN.
                 MOVE ZEROS TO LS-OD-FEE-ASSESSED
             ELSE
                 MOVE WS-NSF-FEE-AMOUNT TO LS-OD-FEE-ASSESSED
+                *> Increment NSF counts only when fee is charged
+                ADD 1 TO LS-OD-NEW-NSF-COUNT
+                    ON SIZE ERROR CONTINUE
+                END-ADD
+                ADD 1 TO ACCT-NSF-COUNT-TODAY
+                    ON SIZE ERROR CONTINUE
+                END-ADD
+                ADD 1 TO ACCT-NSF-COUNT-MTD
+                    ON SIZE ERROR CONTINUE
+                END-ADD
+                ADD 1 TO ACCT-NSF-COUNT-YTD
+                    ON SIZE ERROR CONTINUE
+                END-ADD
             END-IF
         END-IF
-        *> Increment daily, monthly, and yearly NSF counts
-        ADD 1 TO LS-OD-NEW-NSF-COUNT
-            ON SIZE ERROR CONTINUE
-        END-ADD
-        ADD 1 TO ACCT-NSF-COUNT-TODAY
-            ON SIZE ERROR CONTINUE
-        END-ADD
-        ADD 1 TO ACCT-NSF-COUNT-MTD
-            ON SIZE ERROR CONTINUE
-        END-ADD
-        ADD 1 TO ACCT-NSF-COUNT-YTD
-            ON SIZE ERROR CONTINUE
-        END-ADD
     END-IF
 
     MOVE "E0000" TO LS-OD-RESULT-CODE
