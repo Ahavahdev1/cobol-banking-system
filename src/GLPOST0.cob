@@ -82,6 +82,12 @@ POST-GL-ENTRY.
         MOVE "Zero posting amount" TO LS-GL-RESULT-MSG
         EXIT PARAGRAPH
     END-IF
+    *> Check for negative amount
+    IF LS-GLE-AMOUNT < ZERO
+        MOVE "E0064" TO LS-GL-RESULT-CODE
+        MOVE "Negative posting amount" TO LS-GL-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
 
     *> Update GL-RECORD based on normal balance direction.
     *> Determine if this GL account is on the debit or credit side

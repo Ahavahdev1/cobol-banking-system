@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL, INIT, CRPT functions (26 tests)
+*> Tests: POST, TBAL, INIT, CRPT functions (27 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -95,6 +95,7 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-024
     PERFORM TEST-GL-025
     PERFORM TEST-GL-026
+    PERFORM TEST-GL-027
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1076,4 +1077,38 @@ TEST-GL-026.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-GL-RESULT-CODE " expected=E0040"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-027: POST with negative amount -> E0064
+*> ---------------------------------------------------------------
+TEST-GL-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-027: POST negative amount -> E0064"
+        TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 2010 TO WS-GLE-CR-ACCT
+    MOVE -500.00 TO WS-GLE-AMOUNT
+    MOVE "Negative amount test" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 1010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "D" TO GL-NORMAL-BALANCE
+    MOVE 5000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0064"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-GL-RESULT-CODE " expected=E0064"
     END-IF.

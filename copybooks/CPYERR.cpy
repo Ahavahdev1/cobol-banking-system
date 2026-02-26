@@ -102,3 +102,7 @@
     05  ERR-CIF-INVALID-STATUS   PIC X(5) VALUE "E0101".
     *> APY errors
     05  ERR-APY-NEGATIVE-RATE    PIC X(5) VALUE "E0102".
+    *> Fee errors
+    05  ERR-FEE-SCHED-INACTIVE   PIC X(5) VALUE "E0103".
+    *> GL negative amount
+    05  ERR-GL-NEGATIVE-AMOUNT   PIC X(5) VALUE "E0064".

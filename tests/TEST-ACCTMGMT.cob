@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (27 tests)
+*> Tests: OPEN, CLOS, CHKD functions (31 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-028
     PERFORM TEST-AM-029
     PERFORM TEST-AM-030
+    PERFORM TEST-AM-031
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -953,4 +954,39 @@ TEST-AM-030.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0016 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-031: CLOS negative pending-DR blocks closure -> E0017
+*> Signed field with negative value must still be caught.
+*> ---------------------------------------------------------------
+TEST-AM-031.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-031: CLOS negative pending -> E0017"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 0 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE -100.00 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE 0 TO ACCT-ACCRUED-INT
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "N" TO ACCT-GARNISHMENT
+    MOVE 0 TO ACCT-PAST-DUE-AMT
+    MOVE 0 TO ACCT-ESCROW-BAL
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0017"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0017 actual=" WS-ACCT-RESULT-CODE
     END-IF.

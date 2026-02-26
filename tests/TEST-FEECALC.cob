@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-FEECALC.
 *> ================================================================
 *> TEST-FEECALC - Test suite for FEECALC0 Fee Assessment Engine
 *> Tests: Monthly fees, waivers, NSF fees, de minimis, YTD tracking
-*> 19 tests (FE-001 to FE-019)
+*> 23 tests (FE-001 to FE-023)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,7 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-020
     PERFORM TEST-FE-021
     PERFORM TEST-FE-022
+    PERFORM TEST-FE-023
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -603,11 +604,11 @@ TEST-FE-013.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> FE-014: Inactive fee schedule (status "I") -> no fee
+*> FE-014: Inactive fee schedule (status "I") -> E0103
 *> ---------------------------------------------------------------
 TEST-FE-014.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "FE-014: Inactive schedule -> no fee" TO WS-TEST-NAME
+    MOVE "FE-014: Inactive schedule -> E0103" TO WS-TEST-NAME
     INITIALIZE ACCT-RECORD
     INITIALIZE FEE-SCHEDULE-RECORD
     INITIALIZE WS-FEE-RESULT
@@ -622,19 +623,13 @@ TEST-FE-014.
     MOVE "I" TO FEE-STATUS
     CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
                           WS-FEE-RESULT
-    IF WS-FEE-RESULT-CODE = "E0000"
-        IF WS-FEE-ASSESSED = 0
-            ADD 1 TO WS-PASS-COUNT
-            DISPLAY "  PASS: " WS-TEST-NAME
-        ELSE
-            ADD 1 TO WS-FAIL-COUNT
-            DISPLAY "  FAIL: " WS-TEST-NAME
-                " expected=0 actual=" WS-FEE-ASSESSED
-        END-IF
+    IF WS-FEE-RESULT-CODE = "E0103"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " rc=" WS-FEE-RESULT-CODE
+            " rc=" WS-FEE-RESULT-CODE " expected=E0103"
     END-IF.
 
 *> ---------------------------------------------------------------
@@ -943,4 +938,31 @@ TEST-FE-022.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-FEE-RESULT-CODE
             " fee=" WS-FEE-ASSESSED
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-023: Inactive fee schedule returns E0103
+*> ---------------------------------------------------------------
+TEST-FE-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-023: Inactive fee sched -> E0103" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 1000.00 TO ACCT-LEDGER-BAL
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "I" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0103"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE " expected=E0103"
     END-IF.
