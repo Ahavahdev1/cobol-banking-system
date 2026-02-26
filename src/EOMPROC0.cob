@@ -39,6 +39,9 @@ COPY CPYAUDT.
     05  WS-AUDT-RESULT-CODE  PIC X(5).
     05  WS-AUDT-RESULT-MSG   PIC X(50).
 
+*> Statement date calculation
+01  WS-NEXT-STMT-DATE          PIC 9(8).
+
 *> Batch counters
 01  WS-ACCTS-PROCESSED       PIC 9(8) VALUE 0.
 01  WS-ACCTS-ERRORS          PIC 9(8) VALUE 0.
@@ -111,7 +114,10 @@ PROCESS-EOM-ACCOUNT.
     PERFORM EOM-RESET-MTD
 
     *> Step 4: Log audit
-    PERFORM EOM-LOG-AUDIT.
+    PERFORM EOM-LOG-AUDIT
+
+    *> Step 5: Update statement date tracking
+    PERFORM EOM-UPDATE-STMT-DATES.
 
 *> ---------------------------------------------------------------
 *> Assess monthly fee via FEECALC0
@@ -189,3 +195,13 @@ EOM-LOG-AUDIT.
     CALL "AUDTLOG0" USING WS-AUDIT-FUNCTION
                           AUDIT-RECORD
                           WS-AUDIT-RESULT.
+
+*> ---------------------------------------------------------------
+*> Update statement date fields on account record
+*> ---------------------------------------------------------------
+EOM-UPDATE-STMT-DATES.
+    MOVE LS-BATCH-DATE TO ACCT-LAST-STMT-DATE
+    *> Set next statement date to approximately 1 month later
+    *> (simplified: add 100 to YYYYMMDD date for next month)
+    ADD 100 TO LS-BATCH-DATE GIVING WS-NEXT-STMT-DATE
+    MOVE WS-NEXT-STMT-DATE TO ACCT-NEXT-STMT-DATE.

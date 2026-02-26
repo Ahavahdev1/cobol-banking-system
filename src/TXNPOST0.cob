@@ -31,6 +31,7 @@ MAIN-LOGIC.
     PERFORM VALIDATE-AMOUNT
     PERFORM VALIDATE-ACCOUNT-STATUS
     PERFORM CHECK-BALANCE
+    PERFORM CHECK-CD-WITHDRAWAL
     PERFORM CAPTURE-BEFORE-SNAPSHOT
     PERFORM POST-TRANSACTION
     PERFORM UPDATE-AVAILABLE-BALANCE
@@ -98,6 +99,40 @@ CHECK-BALANCE.
             MOVE "E0030" TO LS-TXN-RESULT-CODE
             MOVE "Insufficient funds" TO LS-TXN-RESULT-MSG
             GOBACK
+        END-IF
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Check if CD withdrawal is before maturity (early withdrawal)
+*> If so, require explicit penalty acknowledgment from caller.
+*> When acknowledged, compute penalty amount but allow withdrawal.
+*> Penalty = ACCT-CD-EARLY-WD-PEN days of interest on balance.
+*> ---------------------------------------------------------------
+CHECK-CD-WITHDRAWAL.
+    IF ACCT-SUB-TYPE = "CD" AND TXN-DR-CR = "D"
+        IF ACCT-MATURITY-DATE > 0
+            AND TXN-POST-DATE < ACCT-MATURITY-DATE
+            *> Early withdrawal detected
+            IF TXN-CD-EARLY-WD = "Y"
+                *> Caller acknowledges penalty - compute penalty amount
+                *> Penalty = (rate/100/365) * balance * penalty-days
+                COMPUTE TXN-CD-PENALTY-AMT ROUNDED =
+                    (ACCT-INT-RATE / 100 / 365)
+                    * ACCT-LEDGER-BAL
+                    * ACCT-CD-EARLY-WD-PEN
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-TXN-RESULT-CODE
+                        MOVE "Overflow computing CD penalty"
+                            TO LS-TXN-RESULT-MSG
+                        GOBACK
+                END-COMPUTE
+            ELSE
+                *> Early withdrawal not acknowledged - reject
+                MOVE "E0039" TO LS-TXN-RESULT-CODE
+                MOVE "CD early withdrawal requires penalty ack"
+                    TO LS-TXN-RESULT-MSG
+                GOBACK
+            END-IF
         END-IF
     END-IF.
 

@@ -3,6 +3,7 @@ PROGRAM-ID. GLPOST0.
 *> ================================================================
 *> GLPOST0 - General Ledger Posting and Trial Balance
 *> POST = Post entry, TBAL = Trial balance, INIT = Initialize
+*> CRPT = Call Report line lookup (FFIEC 041)
 *> ================================================================
 
 DATA DIVISION.
@@ -39,6 +40,8 @@ PROCEDURE DIVISION USING LS-FUNCTION
             PERFORM TRIAL-BALANCE
         WHEN "INIT"
             PERFORM INIT-GL-RECORD
+        WHEN "CRPT"
+            PERFORM CALL-RPT-LOOKUP
         WHEN OTHER
             MOVE "E0001" TO LS-GL-RESULT-CODE
             MOVE "Invalid function" TO LS-GL-RESULT-MSG
@@ -144,6 +147,9 @@ POST-GL-ENTRY.
             END-ADD
     END-EVALUATE
 
+    *> Map GL account to Call Report line code (12 CFR 304)
+    PERFORM MAP-CALL-RPT-LINE
+
     *> Update last posting date
     MOVE LS-GLE-POST-DATE TO GL-LAST-POST-DATE
 
@@ -185,6 +191,51 @@ TRIAL-BALANCE.
 INIT-GL-RECORD.
     INITIALIZE GL-RECORD
     MOVE "A" TO GL-STATUS
+
+    MOVE "E0000" TO LS-GL-RESULT-CODE
+    MOVE SPACES TO LS-GL-RESULT-MSG
+    EXIT PARAGRAPH.
+
+*> ----------------------------------------------------------------
+*> MAP-CALL-RPT-LINE - Map GL account to FFIEC 041 Call Report line
+*> Populates GL-CALL-RPT-LINE based on GL-ACCOUNT-NUM
+*> Reference: 12 CFR 304 (Call Report / FFIEC 041)
+*> ----------------------------------------------------------------
+MAP-CALL-RPT-LINE.
+    EVALUATE GL-ACCOUNT-NUM
+        WHEN 0000001010
+            MOVE "1110" TO GL-CALL-RPT-LINE
+            *> Schedule RC-A: Cash and balances due
+        WHEN 0000004010
+            MOVE "2210" TO GL-CALL-RPT-LINE
+            *> Schedule RC-E: Demand deposits (checking)
+        WHEN 0000004030
+            MOVE "2213" TO GL-CALL-RPT-LINE
+            *> Schedule RC-E: Savings deposits
+        WHEN 0000004040
+            MOVE "2215" TO GL-CALL-RPT-LINE
+            *> Schedule RC-E: Money market deposits
+        WHEN 0000004050
+            MOVE "2216" TO GL-CALL-RPT-LINE
+            *> Schedule RC-E: Time deposits (CD)
+        WHEN 0000007500
+            MOVE "4000" TO GL-CALL-RPT-LINE
+            *> Schedule RI: Fee income
+        WHEN 0000008010
+            MOVE "4010" TO GL-CALL-RPT-LINE
+            *> Schedule RI: Interest expense
+        WHEN OTHER
+            MOVE "9999" TO GL-CALL-RPT-LINE
+            *> Unmapped GL account
+    END-EVALUATE
+    EXIT PARAGRAPH.
+
+*> ----------------------------------------------------------------
+*> CALL-RPT-LOOKUP - Look up Call Report line for a GL account
+*> Sets GL-CALL-RPT-LINE from GL-ACCOUNT-NUM in GL-RECORD
+*> ----------------------------------------------------------------
+CALL-RPT-LOOKUP.
+    PERFORM MAP-CALL-RPT-LINE
 
     MOVE "E0000" TO LS-GL-RESULT-CODE
     MOVE SPACES TO LS-GL-RESULT-MSG

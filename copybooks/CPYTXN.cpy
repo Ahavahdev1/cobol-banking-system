@@ -58,3 +58,7 @@
         10  TXN-CREATED-TIMESTAMP  PIC 9(14).
         10  TXN-CREATED-USER       PIC X(8).
         10  TXN-APPROVED-USER      PIC X(8).
+    05  TXN-CD-INFO.
+        10  TXN-CD-EARLY-WD       PIC X(1).
+        *> Y = caller acknowledges early withdrawal penalty
+        10  TXN-CD-PENALTY-AMT    PIC S9(9)V99.

@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (27 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (30 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -58,6 +58,9 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-025
     PERFORM TEST-TP-026
     PERFORM TEST-TP-027
+    PERFORM TEST-TP-028
+    PERFORM TEST-TP-029
+    PERFORM TEST-TP-030
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -903,4 +906,121 @@ TEST-TP-027.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> Helper: Set up active CD account with balance and maturity
+*> ---------------------------------------------------------------
+SETUP-ACTIVE-CD.
+    INITIALIZE ACCT-RECORD
+    MOVE 000012345678 TO ACCT-NUMBER
+    MOVE 2 TO ACCT-CHECK-DIGIT
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    MOVE "CD01" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CD" TO ACCT-SUB-TYPE
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "N" TO ACCT-DECEASED
+    MOVE "N" TO ACCT-GARNISHMENT
+    MOVE 20260101 TO ACCT-OPEN-DATE
+    MOVE 20270101 TO ACCT-MATURITY-DATE
+    MOVE 2.5000000 TO ACCT-INT-RATE
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE 12 TO ACCT-CD-TERM-MONTHS
+    MOVE "A" TO ACCT-CD-RENEWAL-TYPE
+    MOVE 090 TO ACCT-CD-EARLY-WD-PEN
+    MOVE 10 TO ACCT-CD-GRACE-DAYS.
+
+*> ---------------------------------------------------------------
+*> TP-028: CD withdrawal before maturity without penalty ack -> E0039
+*> ---------------------------------------------------------------
+TEST-TP-028.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-028: CD early WD no ack=E0039" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CD
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 5000.00 TO TXN-AMOUNT
+    MOVE 5000.00 TO TXN-CASH-AMOUNT
+    *> Post date before maturity, no penalty acknowledgment
+    MOVE 20260601 TO TXN-POST-DATE
+    MOVE 20260601 TO TXN-EFFECTIVE-DATE
+    MOVE " " TO TXN-CD-EARLY-WD
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0039"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0039 actual=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-029: CD withdrawal before maturity with penalty ack -> E0000
+*> ---------------------------------------------------------------
+TEST-TP-029.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-029: CD early WD w/ack=E0000" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CD
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 5000.00 TO TXN-AMOUNT
+    MOVE 5000.00 TO TXN-CASH-AMOUNT
+    *> Post date before maturity, WITH penalty acknowledgment
+    MOVE 20260601 TO TXN-POST-DATE
+    MOVE 20260601 TO TXN-EFFECTIVE-DATE
+    MOVE "Y" TO TXN-CD-EARLY-WD
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF TXN-CD-PENALTY-AMT > 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " penalty=" TXN-CD-PENALTY-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " penalty should be > 0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0000 actual=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-030: CD withdrawal after maturity -> E0000 (no penalty needed)
+*> ---------------------------------------------------------------
+TEST-TP-030.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-030: CD post-maturity WD=E0000" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CD
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 5000.00 TO TXN-AMOUNT
+    MOVE 5000.00 TO TXN-CASH-AMOUNT
+    *> Post date AFTER maturity - no penalty needed
+    MOVE 20270115 TO TXN-POST-DATE
+    MOVE 20270115 TO TXN-EFFECTIVE-DATE
+    *> Deliberately NOT setting TXN-CD-EARLY-WD to prove no ack needed
+    MOVE " " TO TXN-CD-EARLY-WD
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0000 actual=" WS-TXN-RESULT-CODE
     END-IF.

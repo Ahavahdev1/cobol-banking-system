@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip (8 tests)
+*>        closed-account skip, statement dates (10 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -37,6 +37,8 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-006
     PERFORM TEST-EM-007
     PERFORM TEST-EM-008
+    PERFORM TEST-EM-009
+    PERFORM TEST-EM-010
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -278,4 +280,54 @@ TEST-EM-008.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " date=" BATCH-DATE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-009: EOM updates ACCT-LAST-STMT-DATE to batch date
+*> ---------------------------------------------------------------
+TEST-EM-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-009: ACCT-LAST-STMT-DATE = batch date"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260228 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF ACCT-LAST-STMT-DATE = 20260228
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " last-stmt=" ACCT-LAST-STMT-DATE
+            " expected=20260228"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-010: EOM sets ACCT-NEXT-STMT-DATE to next month
+*> ---------------------------------------------------------------
+TEST-EM-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-010: ACCT-NEXT-STMT-DATE = next month"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260228 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF ACCT-NEXT-STMT-DATE = 20260328
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " next-stmt=" ACCT-NEXT-STMT-DATE
+            " expected=20260328"
     END-IF.

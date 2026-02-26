@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL functions (14 tests)
+*> Tests: POST, TBAL, CRPT functions (17 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -83,6 +83,9 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-012
     PERFORM TEST-GL-013
     PERFORM TEST-GL-014
+    PERFORM TEST-GL-015
+    PERFORM TEST-GL-016
+    PERFORM TEST-GL-017
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -623,4 +626,109 @@ TEST-GL-014.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " TBAL result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-015: POST to checking deposit (4010) sets CALL-RPT-LINE=2210
+*> ---------------------------------------------------------------
+TEST-GL-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-015: POST checking RPT=2210" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 4010 TO WS-GLE-CR-ACCT
+    MOVE 500.00 TO WS-GLE-AMOUNT
+    MOVE "Checking deposit" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 4010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "L" TO GL-ACCT-TYPE
+    MOVE "C" TO GL-NORMAL-BALANCE
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CALL-RPT-LINE = "2210  "
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=2210 actual=" GL-CALL-RPT-LINE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-016: POST to savings account (4030) sets CALL-RPT-LINE=2213
+*> ---------------------------------------------------------------
+TEST-GL-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-016: POST savings RPT=2213" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 4030 TO WS-GLE-CR-ACCT
+    MOVE 1000.00 TO WS-GLE-AMOUNT
+    MOVE "Savings deposit" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 4030 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "L" TO GL-ACCT-TYPE
+    MOVE "C" TO GL-NORMAL-BALANCE
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CALL-RPT-LINE = "2213  "
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=2213 actual=" GL-CALL-RPT-LINE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-017: CRPT maps cash GL (1010) to Call Report line 1110
+*> ---------------------------------------------------------------
+TEST-GL-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-017: CRPT cash 1010=line 1110" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "CRPT" TO WS-FUNCTION
+    MOVE 1010 TO GL-ACCOUNT-NUM
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CALL-RPT-LINE = "1110  "
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=1110 actual=" GL-CALL-RPT-LINE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
     END-IF.
