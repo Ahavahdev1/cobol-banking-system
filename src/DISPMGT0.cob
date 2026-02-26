@@ -270,6 +270,12 @@ DO-RESOLVE-DISPUTE.
                     TO LS-DSP-RESULT-MSG
                 GOBACK
             END-IF
+            IF DSP-TXN-AMOUNT > DSP-PROVISIONAL-AMT
+                MOVE "E0002" TO LS-DSP-RESULT-CODE
+                MOVE "Partial amount exceeds provisional credit"
+                    TO LS-DSP-RESULT-MSG
+                GOBACK
+            END-IF
             IF DSP-PROVISIONAL-AMT > DSP-TXN-AMOUNT
                 COMPUTE WS-REVERSE-AMT =
                     DSP-PROVISIONAL-AMT - DSP-TXN-AMOUNT

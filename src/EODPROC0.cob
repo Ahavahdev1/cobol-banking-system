@@ -371,22 +371,22 @@ EOD-LOG-AUDIT.
 
 *> ---------------------------------------------------------------
 *> Release matured holds on account
-*> LIMITATION: ACCT-RECORD carries only a summary ACCT-HOLD-AMOUNT
-*> with no per-account hold release date. A production system must
-*> iterate individual HOLD-RECORDs (CPYHOLD) and compare each
-*> HOLD-RELEASE-DATE to the batch date before releasing.
-*> This simplified version uses the HOLD-RELEASE-DATE from the
-*> last HOLDCALC0 result in WS-HOLD-RELEASE-DT as a proxy.
+*> Uses ACCT-HOLD-RELEASE-DT from the account record to determine
+*> if the hold has matured. Callers of HOLDCALC0 must copy
+*> LS-HOLD-RELEASE-DT to ACCT-HOLD-RELEASE-DT when placing holds.
+*> When ACCT-HOLD-RELEASE-DT = 0, the hold is not auto-released.
 *> ---------------------------------------------------------------
 EOD-RELEASE-HOLDS.
     IF ACCT-HOLD-AMOUNT > 0
         *> Only release if hold has matured (release date <= batch date)
-        IF WS-HOLD-RELEASE-DT > 0
-            AND WS-HOLD-RELEASE-DT > LS-BATCH-DATE
-            *> Hold has not yet matured; skip release
+        *> Skip release when: no release date set (0) or date is future
+        IF ACCT-HOLD-RELEASE-DT = 0
+            OR ACCT-HOLD-RELEASE-DT > LS-BATCH-DATE
+            *> Hold has no release date or has not yet matured
             CONTINUE
         ELSE
             MOVE 0 TO ACCT-HOLD-AMOUNT
+            MOVE 0 TO ACCT-HOLD-RELEASE-DT
             COMPUTE ACCT-AVAIL-BAL =
                 ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
                 ON SIZE ERROR

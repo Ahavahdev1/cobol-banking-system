@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (16 tests)
+*>        batch status, multi-account, error paths (17 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-014
     PERFORM TEST-BE-015
     PERFORM TEST-BE-016
+    PERFORM TEST-BE-017
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -342,13 +343,15 @@ TEST-BE-010.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> BE-011: EOD releases hold and recalculates available balance
+*> BE-011: EOD releases matured hold (release date <= batch date)
 *> ---------------------------------------------------------------
 TEST-BE-011.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "BE-011: Hold released, avail=ledger" TO WS-TEST-NAME
+    MOVE "BE-011: Matured hold released"
+        TO WS-TEST-NAME
     PERFORM SETUP-INTEREST-ACCOUNT
     MOVE 500.00 TO ACCT-HOLD-AMOUNT
+    MOVE 20260225 TO ACCT-HOLD-RELEASE-DT
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
     INITIALIZE BATCH-RECORD
@@ -590,4 +593,40 @@ TEST-BE-016.
             " next-pay=" ACCT-INT-NEXT-PAY-DATE
             " expected=20260215"
             " errors=" BATCH-ACCTS-ERRORS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-017: Hold with no release date (0) is NOT released
+*> ---------------------------------------------------------------
+TEST-BE-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-017: Hold no release dt preserved"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE 500.00 TO ACCT-HOLD-AMOUNT
+    MOVE 0 TO ACCT-HOLD-RELEASE-DT
+    COMPUTE ACCT-AVAIL-BAL =
+        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-HOLD-AMOUNT = 500.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " hold=" ACCT-HOLD-AMOUNT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " hold=" ACCT-HOLD-AMOUNT
+                " expected=500.00 (not released)"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
     END-IF.

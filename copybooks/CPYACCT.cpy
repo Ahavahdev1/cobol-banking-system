@@ -83,6 +83,10 @@
         10  ACCT-LAST-STMT-DATE    PIC 9(8).
         10  ACCT-NEXT-STMT-DATE    PIC 9(8).
         10  ACCT-STMT-CYCLE        PIC 9(2).
+        10  ACCT-HOLD-RELEASE-DT   PIC 9(8).
+        *> Earliest date that ACCT-HOLD-AMOUNT may be released.
+        *> Set by callers of HOLDCALC0 from LS-HOLD-RELEASE-DT.
+        *> 0 = no release date known (hold not auto-released).
     05  ACCT-STATUS-FLAGS.
         10  ACCT-STATUS            PIC X(1).
         *> A = Active, D = Dormant, F = Frozen,

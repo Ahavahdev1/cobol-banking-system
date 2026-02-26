@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (21 tests)
+*> Tests: File, provisional credit, resolve, inquiry (22 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +49,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-019
     PERFORM TEST-DP-020
     PERFORM TEST-DP-021
+    PERFORM TEST-DP-022
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -841,3 +842,62 @@ TEST-DP-021.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0044"
     END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-022: RSLV partial amount exceeds provisional -> E0002
+*> File dispute, issue PROV for $500, then RSLV PA with $600
+*> ---------------------------------------------------------------
+TEST-DP-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-022: RSLV PA exceeds prov -> E0002"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    *> Step 1: FILE dispute for $500
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000115 TO DSP-TXN-ID
+    MOVE 500.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " FILE rc=" WS-DSP-RESULT-CODE
+        GO TO TEST-DP-022-END
+    END-IF
+    *> Step 2: Issue provisional credit
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " PROV rc=" WS-DSP-RESULT-CODE
+        GO TO TEST-DP-022-END
+    END-IF
+    *> Step 3: RSLV partial with amount > provisional ($600 > $500)
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "PA" TO DSP-RESOLUTION-CODE
+    MOVE 600.00 TO DSP-TXN-AMOUNT
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0002"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0002"
+    END-IF.
+TEST-DP-022-END.
+    CONTINUE.
