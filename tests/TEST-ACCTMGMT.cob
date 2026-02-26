@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (19 tests)
+*> Tests: OPEN, CLOS, CHKD functions (22 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -45,6 +45,9 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-017
     PERFORM TEST-AM-018
     PERFORM TEST-AM-019
+    PERFORM TEST-AM-020
+    PERFORM TEST-AM-021
+    PERFORM TEST-AM-022
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -601,4 +604,91 @@ TEST-AM-019.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0035 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-020: OPEN with product code MMA1 -> E0000, sub-type=MM
+*> ---------------------------------------------------------------
+TEST-AM-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-020: OPEN MMA1 sub-type=MM" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "MMA1" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-TYPE = "D" AND ACCT-SUB-TYPE = "MM"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " type=" ACCT-TYPE
+                " sub=" ACCT-SUB-TYPE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-021: Invalid function code "XXXX" -> E0001
+*> ---------------------------------------------------------------
+TEST-AM-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-021: Invalid function=E0001" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "XXXX" TO WS-FUNCTION
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0001 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-022: CLOS on dormant account -> E0000, status=C
+*> ---------------------------------------------------------------
+TEST-AM-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-022: CLOS dormant acct=E0000" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "D" TO ACCT-STATUS
+    MOVE 0 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE 0 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-STATUS = "C"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" ACCT-STATUS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
     END-IF.

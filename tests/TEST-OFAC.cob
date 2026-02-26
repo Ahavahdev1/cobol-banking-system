@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-OFAC.
 *> ================================================================
 *> TEST-OFAC - Test suite for OFAC Screening Module
-*> Tests: CHKN, CHKB, STAT functions (8 tests)
+*> Tests: CHKN, CHKB, STAT functions (11 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -38,6 +38,9 @@ MAIN-PROGRAM.
     PERFORM TEST-OF-006
     PERFORM TEST-OF-007
     PERFORM TEST-OF-008
+    PERFORM TEST-OF-009
+    PERFORM TEST-OF-010
+    PERFORM TEST-OF-011
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -315,4 +318,112 @@ TEST-OF-008.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-OFAC-RESULT-CODE
             " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OF-009: CHKB beneficiary country "CU" -> E0025 match
+*> ---------------------------------------------------------------
+TEST-OF-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OF-009: CHKB sanctioned country CU -> E0025"
+        TO WS-TEST-NAME
+    INITIALIZE WS-OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE "CHKB" TO WS-OFAC-FUNCTION
+    MOVE "REGULAR COMPANY" TO OFAC-CHECK-NAME
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "CU " TO OFAC-CHECK-COUNTRY
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "B" TO OFAC-CHECK-TYPE OF WS-OFAC-CHECK-RECORD
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          WS-OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        IF OFAC-MATCH-FOUND OF WS-OFAC-CHECK-RECORD = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " match=" OFAC-MATCH-FOUND
+                    OF WS-OFAC-CHECK-RECORD
+                " expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-OFAC-RESULT-CODE
+            " expected=E0025"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OF-010: CHKB beneficiary country "SY" -> E0025 match
+*> ---------------------------------------------------------------
+TEST-OF-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OF-010: CHKB sanctioned country SY -> E0025"
+        TO WS-TEST-NAME
+    INITIALIZE WS-OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE "CHKB" TO WS-OFAC-FUNCTION
+    MOVE "NORMAL BUSINESS LTD" TO OFAC-CHECK-NAME
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "SY " TO OFAC-CHECK-COUNTRY
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "B" TO OFAC-CHECK-TYPE OF WS-OFAC-CHECK-RECORD
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          WS-OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        IF OFAC-MATCH-FOUND OF WS-OFAC-CHECK-RECORD = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " match=" OFAC-MATCH-FOUND
+                    OF WS-OFAC-CHECK-RECORD
+                " expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-OFAC-RESULT-CODE
+            " expected=E0025"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OF-011: CHKB beneficiary country "RU" -> E0025 match
+*> ---------------------------------------------------------------
+TEST-OF-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OF-011: CHKB sanctioned country RU -> E0025"
+        TO WS-TEST-NAME
+    INITIALIZE WS-OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE "CHKB" TO WS-OFAC-FUNCTION
+    MOVE "STANDARD TRADING INC" TO OFAC-CHECK-NAME
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "RU " TO OFAC-CHECK-COUNTRY
+        OF WS-OFAC-CHECK-RECORD
+    MOVE "B" TO OFAC-CHECK-TYPE OF WS-OFAC-CHECK-RECORD
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          WS-OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        IF OFAC-MATCH-FOUND OF WS-OFAC-CHECK-RECORD = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " match=" OFAC-MATCH-FOUND
+                    OF WS-OFAC-CHECK-RECORD
+                " expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-OFAC-RESULT-CODE
+            " expected=E0025"
     END-IF.

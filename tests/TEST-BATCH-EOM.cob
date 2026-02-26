@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip, statement dates, YTD reset (13 tests)
+*>        closed-account skip, statement dates, YTD reset (16 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -22,6 +22,7 @@ COPY CPYBATCH.
     05  WS-BATCH-RESULT-MSG   PIC X(50).
 
 01  WS-SAVED-LEDGER-BAL    PIC S9(13)V99.
+01  WS-SAVED-YTD-FEES     PIC S9(9)V99.
 
 PROCEDURE DIVISION.
 MAIN-PROGRAM.
@@ -42,6 +43,9 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-011
     PERFORM TEST-EM-012
     PERFORM TEST-EM-013
+    PERFORM TEST-EM-014
+    PERFORM TEST-EM-015
+    PERFORM TEST-EM-016
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -482,4 +486,113 @@ TEST-EM-013.
             " int-paid=" ACCT-YTD-INT-PAID
     END-IF.
 TEST-EM-013-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> EM-014: Fee posting failure rollback restores YTD fees
+*> Set ACCT-DECEASED = "Y" so TXNPOST0 rejects the fee debit
+*> (E0036) while EOMPROC0 still processes the account (status "A").
+*> After rollback, ACCT-YTD-FEES-CHARGED should equal pre-fee value
+*> and BATCH-ACCTS-ERRORS should be incremented.
+*> ---------------------------------------------------------------
+TEST-EM-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-014: Fee post failure rolls back YTD fees"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    *> Set deceased flag to cause TXNPOST0 to reject the fee posting
+    MOVE "Y" TO ACCT-DECEASED
+    *> Pre-populate YTD fees to a known value
+    MOVE 100.00 TO ACCT-YTD-FEES-CHARGED
+    MOVE ACCT-YTD-FEES-CHARGED TO WS-SAVED-YTD-FEES
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260228 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> EOMPROC0 should complete (possibly with errors)
+    *> FEECALC0 succeeds and updates YTD, then TXNPOST0 fails,
+    *> triggering rollback of YTD fees and error count increment.
+    IF BATCH-ACCTS-ERRORS > 0
+        AND ACCT-YTD-FEES-CHARGED = WS-SAVED-YTD-FEES
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " errors=" BATCH-ACCTS-ERRORS
+            " ytd-fees=" ACCT-YTD-FEES-CHARGED
+            " expected=" WS-SAVED-YTD-FEES
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-015: Jan 31 2026 -> next stmt date caps to Feb 28 (non-leap)
+*> 2026 is not a leap year, so February has 28 days.
+*> Day 31 must be capped to 28.
+*> ---------------------------------------------------------------
+TEST-EM-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-015: Jan 31 -> Feb 28 (non-leap 2026)"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260131 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+        GO TO TEST-EM-015-EXIT
+    END-IF
+    IF ACCT-NEXT-STMT-DATE = 20260228
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " next-stmt=" ACCT-NEXT-STMT-DATE
+            " expected=20260228"
+    END-IF.
+TEST-EM-015-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> EM-016: Jan 31 2024 -> next stmt date caps to Feb 29 (leap year)
+*> 2024 is a leap year (divisible by 4, not by 100), so February
+*> has 29 days. Day 31 must be capped to 29.
+*> ---------------------------------------------------------------
+TEST-EM-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-016: Jan 31 -> Feb 29 (leap 2024)"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20240131 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+        GO TO TEST-EM-016-EXIT
+    END-IF
+    IF ACCT-NEXT-STMT-DATE = 20240229
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " next-stmt=" ACCT-NEXT-STMT-DATE
+            " expected=20240229"
+    END-IF.
+TEST-EM-016-EXIT.
     CONTINUE.

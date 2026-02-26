@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-SARFIL.
 *> ================================================================
 *> TEST-SARFIL - Test suite for SARFIL0 SAR Filing Manager
-*> Tests: Create, file, dismiss, query, update SAR records (11 tests)
+*> Tests: Create, file, dismiss, query, update SAR records (15 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -35,6 +35,10 @@ MAIN-PROGRAM.
     PERFORM TEST-SF-009
     PERFORM TEST-SF-010
     PERFORM TEST-SR-011
+    PERFORM TEST-SF-012
+    PERFORM TEST-SF-013
+    PERFORM TEST-SF-014
+    PERFORM TEST-SF-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -372,4 +376,128 @@ TEST-SR-011.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-SAR-RESULT-CODE " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SF-012: DISM without narrative -> E0007, status stays P
+*> ---------------------------------------------------------------
+TEST-SF-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "SF-012: DISM without narrative -> E0007"
+        TO WS-TEST-NAME
+    *> Create a valid SAR
+    INITIALIZE SAR-RECORD
+    INITIALIZE WS-SAR-RESULT
+    MOVE "CRTE" TO WS-SAR-FUNCTION
+    MOVE 7777777777 TO SAR-CUST-ID
+    MOVE 8500.00 TO SAR-TOTAL-AMOUNT
+    MOVE "STRC" TO SAR-PATTERN-TYPE
+    MOVE 20260201 TO SAR-START-DATE
+    MOVE 20260215 TO SAR-END-DATE
+    MOVE SPACES TO SAR-NARRATIVE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    *> Now try to dismiss with narrative still spaces
+    INITIALIZE WS-SAR-RESULT
+    MOVE "DISM" TO WS-SAR-FUNCTION
+    MOVE SPACES TO SAR-NARRATIVE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    IF WS-SAR-RESULT-CODE = "E0007"
+        AND SAR-STATUS = "P"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-SAR-RESULT-CODE
+            " status=" SAR-STATUS
+            " expected=E0007/P"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SF-013: UPDT on filed SAR -> E0006, narrative unchanged
+*> ---------------------------------------------------------------
+TEST-SF-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "SF-013: UPDT filed SAR -> E0006"
+        TO WS-TEST-NAME
+    *> Create a SAR
+    INITIALIZE SAR-RECORD
+    INITIALIZE WS-SAR-RESULT
+    MOVE "CRTE" TO WS-SAR-FUNCTION
+    MOVE 8888888888 TO SAR-CUST-ID
+    MOVE 9200.00 TO SAR-TOTAL-AMOUNT
+    MOVE "STRC" TO SAR-PATTERN-TYPE
+    MOVE 20260201 TO SAR-START-DATE
+    MOVE 20260215 TO SAR-END-DATE
+    MOVE "Original narrative" TO SAR-NARRATIVE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    *> File it
+    INITIALIZE WS-SAR-RESULT
+    MOVE "FILE" TO WS-SAR-FUNCTION
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    *> Try to update the filed SAR
+    INITIALIZE WS-SAR-RESULT
+    MOVE "UPDT" TO WS-SAR-FUNCTION
+    MOVE "Changed narrative" TO SAR-NARRATIVE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    IF WS-SAR-RESULT-CODE = "E0006"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-SAR-RESULT-CODE " expected=E0006"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SF-014: CRTE with zero amount -> E0003
+*> ---------------------------------------------------------------
+TEST-SF-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "SF-014: CRTE zero amount -> E0003"
+        TO WS-TEST-NAME
+    INITIALIZE SAR-RECORD
+    INITIALIZE WS-SAR-RESULT
+    MOVE "CRTE" TO WS-SAR-FUNCTION
+    MOVE 1234567890 TO SAR-CUST-ID
+    MOVE 0 TO SAR-TOTAL-AMOUNT
+    MOVE "STRC" TO SAR-PATTERN-TYPE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    IF WS-SAR-RESULT-CODE = "E0003"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-SAR-RESULT-CODE " expected=E0003"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SF-015: CRTE with negative amount -> E0003
+*> ---------------------------------------------------------------
+TEST-SF-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "SF-015: CRTE negative amount -> E0003"
+        TO WS-TEST-NAME
+    INITIALIZE SAR-RECORD
+    INITIALIZE WS-SAR-RESULT
+    MOVE "CRTE" TO WS-SAR-FUNCTION
+    MOVE 1234567890 TO SAR-CUST-ID
+    MOVE -500.00 TO SAR-TOTAL-AMOUNT
+    MOVE "STRC" TO SAR-PATTERN-TYPE
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    IF WS-SAR-RESULT-CODE = "E0003"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-SAR-RESULT-CODE " expected=E0003"
     END-IF.

@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL, CRPT functions (19 tests)
+*> Tests: POST, TBAL, INIT, CRPT functions (22 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -88,6 +88,9 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-017
     PERFORM TEST-GL-018
     PERFORM TEST-GL-019
+    PERFORM TEST-GL-020
+    PERFORM TEST-GL-021
+    PERFORM TEST-GL-022
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -786,4 +789,108 @@ TEST-GL-019.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0001 actual=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-020: INIT function -> E0000, verify GL-STATUS = "A"
+*> ---------------------------------------------------------------
+TEST-GL-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-020: INIT returns E0000 status=A" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "INIT" TO WS-FUNCTION
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-STATUS = "A"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" GL-STATUS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-021: INIT initializes all numeric fields to zero
+*> ---------------------------------------------------------------
+TEST-GL-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-021: INIT zeros all balances" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    *> Pre-populate GL-RECORD with non-zero values
+    MOVE 999.99 TO GL-CURRENT-BAL
+    MOVE 100.00 TO GL-MTD-DEBITS
+    MOVE 200.00 TO GL-MTD-CREDITS
+    MOVE 300.00 TO GL-YTD-DEBITS
+    MOVE 400.00 TO GL-YTD-CREDITS
+    MOVE "INIT" TO WS-FUNCTION
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CURRENT-BAL = 0
+            AND GL-MTD-DEBITS = 0
+            AND GL-MTD-CREDITS = 0
+            AND GL-YTD-DEBITS = 0
+            AND GL-YTD-CREDITS = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" GL-CURRENT-BAL
+                " mtdDR=" GL-MTD-DEBITS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-022: POST with GL-NORMAL-BALANCE = "X" -> E0063
+*> ---------------------------------------------------------------
+TEST-GL-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-022: POST invalid normal bal=E0063"
+        TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 4010 TO WS-GLE-CR-ACCT
+    MOVE 500.00 TO WS-GLE-AMOUNT
+    MOVE "Invalid normal bal" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE "A" TO GL-STATUS
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "X" TO GL-NORMAL-BALANCE
+    MOVE 1000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0063"
+        IF GL-CURRENT-BAL = 1000.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " balance changed=" GL-CURRENT-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0063 actual=" WS-GL-RESULT-CODE
     END-IF.
