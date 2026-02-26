@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-INTCALC.
 *> ================================================================
 *> TEST-INTCALC - Test suite for INTCALC0 Interest Calculator
 *> Tests: Daily interest, accrual bases, tiered rates, edge cases
-*> 26 tests (IC-001 to IC-026)
+*> 27 tests (IC-001 to IC-027)
 *> Includes P1 audit: year-end rollover + century boundary tests
 *> ================================================================
 
@@ -63,6 +63,7 @@ MAIN-PROGRAM.
     PERFORM TEST-IC-024
     PERFORM TEST-IC-025
     PERFORM TEST-IC-026
+    PERFORM TEST-IC-027
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1009,4 +1010,53 @@ TEST-IC-026.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected rc=E0050 actual="
             WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-027: Payment triggered when batch date > pay date (<= fix)
+*> ACCT-INT-NEXT-PAY-DATE = 20260314 (yesterday)
+*> LS-CALC-DATE = 20260315 (today, past the pay date)
+*> With the <= fix, payment should trigger because pay date <= calc date.
+*> $10K @ 5% A/365: daily = 1.369863
+*> Accrued = 100.00 + 1.369863 = 101.369863 -> payment = $101.37
+*> ---------------------------------------------------------------
+TEST-IC-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-027: Payment when batch date > pay date"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "M" TO ACCT-INT-PAY-FREQ
+    MOVE 100.00 TO ACCT-ACCRUED-INT
+    *> Pay date is yesterday; calc date is today (past the pay date)
+    MOVE 20260314 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 20260315 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0000"
+        IF WS-PAYMENT-DUE = "Y"
+            IF WS-PAYMENT-AMT > 0
+                ADD 1 TO WS-PASS-COUNT
+                DISPLAY "  PASS: " WS-TEST-NAME
+                    " pmt=" WS-PAYMENT-AMT
+            ELSE
+                ADD 1 TO WS-FAIL-COUNT
+                DISPLAY "  FAIL: " WS-TEST-NAME
+                    " payment-amt=0 expected>0"
+            END-IF
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " payment-due=N expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE
     END-IF.

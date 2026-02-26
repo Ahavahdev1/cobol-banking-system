@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip, statement dates (10 tests)
+*>        closed-account skip, statement dates, YTD reset (13 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -40,6 +40,8 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-009
     PERFORM TEST-EM-010
     PERFORM TEST-EM-011
+    PERFORM TEST-EM-012
+    PERFORM TEST-EM-013
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -378,4 +380,106 @@ TEST-EM-011.
             " expected=20270131"
     END-IF.
 TEST-EM-011-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> EM-012: December EOM resets all YTD counters
+*> Year-end processing: batch date = 20261231 (December).
+*> EOMPROC0 detects month=12 and zeros all five YTD fields:
+*> ACCT-NSF-COUNT-YTD, ACCT-YTD-FEES-CHARGED,
+*> ACCT-YTD-FEES-WAIVED, ACCT-YTD-INT-EARNED, ACCT-YTD-INT-PAID.
+*> ---------------------------------------------------------------
+TEST-EM-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-012: Dec EOM resets all YTD counters"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    *> Populate YTD fields with non-zero values
+    MOVE 5 TO ACCT-NSF-COUNT-YTD
+    MOVE 144.00 TO ACCT-YTD-FEES-CHARGED
+    MOVE 48.00 TO ACCT-YTD-FEES-WAIVED
+    MOVE 2500.00 TO ACCT-YTD-INT-EARNED
+    MOVE 1200.00 TO ACCT-YTD-INT-PAID
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20261231 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+        GO TO TEST-EM-012-EXIT
+    END-IF
+    IF ACCT-NSF-COUNT-YTD = 0
+        AND ACCT-YTD-FEES-CHARGED = 0
+        AND ACCT-YTD-FEES-WAIVED = 0
+        AND ACCT-YTD-INT-EARNED = 0
+        AND ACCT-YTD-INT-PAID = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " nsf-ytd=" ACCT-NSF-COUNT-YTD
+            " fees-chg=" ACCT-YTD-FEES-CHARGED
+            " fees-wv=" ACCT-YTD-FEES-WAIVED
+            " int-earn=" ACCT-YTD-INT-EARNED
+            " int-paid=" ACCT-YTD-INT-PAID
+    END-IF.
+TEST-EM-012-EXIT.
+    CONTINUE.
+
+*> ---------------------------------------------------------------
+*> EM-013: November EOM does NOT reset YTD counters
+*> Non-December month: batch date = 20261130 (November).
+*> YTD counters must NOT be zeroed (only December resets them).
+*> Note: ACCT-YTD-FEES-CHARGED increases by the $12.00 monthly
+*> fee assessed during EOM (144.00 + 12.00 = 156.00).
+*> ---------------------------------------------------------------
+TEST-EM-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-013: Nov EOM keeps YTD counters intact"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    *> Populate YTD fields with known non-zero values
+    MOVE 5 TO ACCT-NSF-COUNT-YTD
+    MOVE 144.00 TO ACCT-YTD-FEES-CHARGED
+    MOVE 48.00 TO ACCT-YTD-FEES-WAIVED
+    MOVE 2500.00 TO ACCT-YTD-INT-EARNED
+    MOVE 1200.00 TO ACCT-YTD-INT-PAID
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20261130 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+        GO TO TEST-EM-013-EXIT
+    END-IF
+    *> YTD-FEES-CHARGED = 144.00 + 12.00 fee assessed = 156.00
+    *> All other YTD fields unchanged (not December -> no reset)
+    IF ACCT-NSF-COUNT-YTD = 5
+        AND ACCT-YTD-FEES-CHARGED = 156.00
+        AND ACCT-YTD-FEES-WAIVED = 48.00
+        AND ACCT-YTD-INT-EARNED = 2500.00
+        AND ACCT-YTD-INT-PAID = 1200.00
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " nsf-ytd=" ACCT-NSF-COUNT-YTD
+            " fees-chg=" ACCT-YTD-FEES-CHARGED
+            " fees-wv=" ACCT-YTD-FEES-WAIVED
+            " int-earn=" ACCT-YTD-INT-EARNED
+            " int-paid=" ACCT-YTD-INT-PAID
+    END-IF.
+TEST-EM-013-EXIT.
     CONTINUE.

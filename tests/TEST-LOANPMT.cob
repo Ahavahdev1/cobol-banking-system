@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (17 tests)
+*> Tests: Payments, late checks, payoff, edge cases (19 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -47,6 +47,8 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-015
     PERFORM TEST-LP-016
     PERFORM TEST-LP-017
+    PERFORM TEST-LP-026
+    PERFORM TEST-LP-027
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -604,4 +606,88 @@ TEST-LP-017.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0001 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-026: Overpayment capped at remaining balance
+*>         bal=100, accrued=5, pay=200
+*>         int=5, prin=100 (capped), new bal=0
+*> ---------------------------------------------------------------
+TEST-LP-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-026: Overpay capped at balance"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 5.000000 TO ACCT-ACCRUED-INT
+    MOVE 20260315 TO ACCT-NEXT-PMT-DATE
+    MOVE 12 TO ACCT-REMAINING-TERM
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 200.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF WS-LOAN-INT-PORTION = 5.00
+            AND WS-LOAN-PRIN-PORTION = 100.00
+            AND WS-LOAN-NEW-BALANCE = ZERO
+            AND ACCT-LEDGER-BAL = ZERO
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " int=" WS-LOAN-INT-PORTION
+                " prin=" WS-LOAN-PRIN-PORTION
+                " bal=" WS-LOAN-NEW-BALANCE
+                " acct-bal=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-027: Multiple missed payments accumulate past-due
+*>         existing past-due=500, scheduled pmt=500
+*>         LATE call -> past-due should be 1000
+*> ---------------------------------------------------------------
+TEST-LP-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-027: LATE accumulates past-due"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 500.00 TO ACCT-PAST-DUE-AMT
+    MOVE 30 TO ACCT-PAST-DUE-DAYS
+    MOVE 500.00 TO ACCT-PAYMENT-AMT
+    MOVE 20260215 TO ACCT-NEXT-PMT-DATE
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "LATE" TO WS-LOAN-FUNCTION
+    MOVE ZERO TO WS-PAYMENT-AMT
+    MOVE 20260401 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-PAST-DUE-AMT = 1000.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " past-due=" ACCT-PAST-DUE-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " past-due=" ACCT-PAST-DUE-AMT
+                " expected=1000.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
     END-IF.

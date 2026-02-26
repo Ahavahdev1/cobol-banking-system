@@ -102,6 +102,10 @@ COPY CPYAUDT.
 01  WS-NP-LEAP-REM100         PIC 9(4).
 01  WS-NP-LEAP-REM400         PIC 9(4).
 
+*> Rollback fields for interest posting failure
+01  WS-SAVE-ACCRUED-INT        PIC S9(11)V9(6).
+01  WS-SAVE-YTD-INT-PAID       PIC S9(11)V99.
+
 *> Batch control
 01  WS-ACCTS-PROCESSED        PIC 9(8) VALUE 0.
 01  WS-ACCTS-ERRORS           PIC 9(8) VALUE 0.
@@ -209,6 +213,9 @@ PROCESS-ACCOUNT.
 *> ---------------------------------------------------------------
 EOD-ACCRUE-INTEREST.
     INITIALIZE WS-INT-RESULT
+    *> Save pre-INTCALC0 values for rollback if payment posting fails
+    MOVE ACCT-ACCRUED-INT TO WS-SAVE-ACCRUED-INT
+    MOVE ACCT-YTD-INT-PAID TO WS-SAVE-YTD-INT-PAID
     CALL "INTCALC0" USING ACCT-RECORD
                           LS-BATCH-DATE
                           WS-INT-RESULT
@@ -241,6 +248,10 @@ EOD-POST-INTEREST-PAYMENT.
         ADD WS-PAYMENT-AMT TO WS-TOTAL-INT-PAID
         PERFORM ADVANCE-NEXT-PAY-DATE
     ELSE
+        *> Rollback: restore pre-INTCALC0 accrued interest + today
+        MOVE WS-SAVE-ACCRUED-INT TO ACCT-ACCRUED-INT
+        ADD WS-DAILY-INT-AMT TO ACCT-ACCRUED-INT
+        MOVE WS-SAVE-YTD-INT-PAID TO ACCT-YTD-INT-PAID
         ADD 1 TO WS-ACCTS-ERRORS
     END-IF.
 

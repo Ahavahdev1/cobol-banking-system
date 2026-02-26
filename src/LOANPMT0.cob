@@ -111,6 +111,10 @@ PROCESS-PAYMENT.
         END-COMPUTE
         *> Clear accrued interest
         MOVE ZERO TO ACCT-ACCRUED-INT
+        *> Cap principal portion at remaining balance
+        IF WS-PRIN-PORTION > ACCT-LEDGER-BAL
+            MOVE ACCT-LEDGER-BAL TO WS-PRIN-PORTION
+        END-IF
         *> Reduce loan balance by principal portion
         SUBTRACT WS-PRIN-PORTION FROM ACCT-LEDGER-BAL
             ON SIZE ERROR
@@ -119,10 +123,6 @@ PROCESS-PAYMENT.
                     TO LS-LOAN-RESULT-MSG
                 GOBACK
         END-SUBTRACT
-        *> Don't let balance go negative
-        IF ACCT-LEDGER-BAL < ZERO
-            MOVE ZERO TO ACCT-LEDGER-BAL
-        END-IF
     END-IF
     *> Update past due status
     IF LS-PAYMENT-AMT >= ACCT-PAST-DUE-AMT

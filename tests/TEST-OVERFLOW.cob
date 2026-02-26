@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-OVERFLOW.
 *> ================================================================
 *> TEST-OVERFLOW - Test suite for arithmetic overflow protection
 *> Tests: ON SIZE ERROR handling across TXNPOST0, GLPOST0,
-*>        INTCALC0, FEECALC0 (6 tests)
+*>        INTCALC0, FEECALC0, BSACTRO (9 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -62,6 +62,23 @@ COPY CPYFEE.
     05  WS-FEE-WAIVED-FLAG PIC X(1).
     05  WS-FEE-WAIVER-REASON PIC X(2).
 
+*> BSACTRO linkage
+01  WS-BSA-FUNCTION        PIC X(4).
+01  WS-BSA-TXN-INFO.
+    05  WS-BSA-CUST-ID     PIC 9(10).
+    05  WS-BSA-TXN-DATE    PIC 9(8).
+    05  WS-BSA-CASH-AMOUNT PIC S9(13)V99.
+    05  WS-BSA-CASH-DIR    PIC X(1).
+    05  WS-BSA-IS-CASH     PIC X(1).
+    05  WS-BSA-ACCT-NUMBER PIC 9(12).
+01  WS-BSA-RESULT.
+    05  WS-BSA-RESULT-CODE    PIC X(5).
+    05  WS-BSA-RESULT-MSG     PIC X(50).
+    05  WS-BSA-CTR-REQUIRED   PIC X(1).
+    05  WS-BSA-CASH-IN-TOTAL  PIC S9(13)V99.
+    05  WS-BSA-CASH-OUT-TOTAL PIC S9(13)V99.
+COPY CPYCTR.
+
 01  WS-EXPECTED-BAL        PIC S9(13)V99.
 
 PROCEDURE DIVISION.
@@ -76,6 +93,9 @@ MAIN-PROGRAM.
     PERFORM TEST-OV-004
     PERFORM TEST-OV-005
     PERFORM TEST-OV-006
+    PERFORM TEST-OV-007
+    PERFORM TEST-OV-008
+    PERFORM TEST-OV-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -339,4 +359,104 @@ TEST-OV-006.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0040 actual=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OV-007: INTCALC0 YTD interest earned overflow
+*> ACCT-YTD-INT-EARNED PIC S9(11)V99 max = 99999999999.99
+*> Set near max, small daily interest causes overflow -> E0040
+*> ---------------------------------------------------------------
+TEST-OV-007.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OV-007: YTD int earned overflow -> E0040"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 100000.00 TO ACCT-LEDGER-BAL
+    MOVE 100000.00 TO ACCT-AVAIL-BAL
+    MOVE 100000.00 TO ACCT-COLLECTED-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 99999999999.00 TO ACCT-YTD-INT-EARNED
+    MOVE 20260226 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0040"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0040 actual=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OV-008: INTCALC0 YTD interest paid overflow
+*> ACCT-YTD-INT-PAID PIC S9(11)V99 max = 99999999999.99
+*> Set near max, trigger payment via ACCT-INT-NEXT-PAY-DATE = calc
+*> date, accrued interest = 500.00 causes YTD paid overflow -> E0040
+*> ---------------------------------------------------------------
+TEST-OV-008.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OV-008: YTD int paid overflow -> E0040"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 100000.00 TO ACCT-LEDGER-BAL
+    MOVE 100000.00 TO ACCT-AVAIL-BAL
+    MOVE 100000.00 TO ACCT-COLLECTED-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 500.000000 TO ACCT-ACCRUED-INT
+    MOVE 99999999999.00 TO ACCT-YTD-INT-PAID
+    MOVE 20260226 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 20260226 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0040"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0040 actual=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OV-009: BSACTRO CTR cash-in total overflow
+*> CTR-CASH-IN-TOTAL PIC S9(13)V99 max = 9999999999999.99
+*> Set near max, add 5000.00 via AGGR -> E0040
+*> ---------------------------------------------------------------
+TEST-OV-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OV-009: CTR cash-in overflow -> E0040"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-BSA-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "AGGR" TO WS-BSA-FUNCTION
+    MOVE 1000000001 TO CTR-CUST-ID
+    MOVE 20260226 TO CTR-TXN-DATE
+    MOVE 9999999999995.00 TO CTR-CASH-IN-TOTAL
+    MOVE 1000000001 TO WS-BSA-CUST-ID
+    MOVE 20260226 TO WS-BSA-TXN-DATE
+    MOVE 5000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "I" TO WS-BSA-CASH-DIR
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 000012345678 TO WS-BSA-ACCT-NUMBER
+    CALL "BSACTRO" USING WS-BSA-FUNCTION CTR-RECORD
+                         WS-BSA-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0040"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0040 actual=" WS-BSA-RESULT-CODE
     END-IF.

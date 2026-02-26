@@ -101,7 +101,7 @@ echo "=== PHASE 4: PRODUCTION HARDENING ==="
 mkdir -p data
 rm -f data/*.dat
 
-compile_and_run "TEST-OVERFLOW" "TXNPOST0" "GLPOST0" "INTCALC0" "FEECALC0"
+compile_and_run "TEST-OVERFLOW" "TXNPOST0" "GLPOST0" "INTCALC0" "FEECALC0" "BSACTRO"
 compile_and_run "TEST-HOLDDATE" "HOLDCALC0" "DATEUTIL"
 compile_and_run "TEST-SAR" "BSACTRO"
 compile_and_run "TEST-AUDTLOG" "AUDTLOG0"
