@@ -51,6 +51,7 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-019
     PERFORM TEST-EM-020
     PERFORM TEST-EM-021
+    PERFORM TEST-EM-022
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -815,6 +816,50 @@ TEST-EM-021.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " expected=20260430 actual="
                 ACCT-NEXT-STMT-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-022: Dormant account — no fee assessed, MTD reset, no error
+*> Dormant accounts skip fee assessment (debits blocked by TXNPOST0)
+*> but still get MTD counter resets and statement date updates
+*> ---------------------------------------------------------------
+TEST-EM-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-022: Dormant acct no fee, MTD reset"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    MOVE "D" TO ACCT-STATUS
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 3 TO ACCT-NSF-COUNT-MTD
+    MOVE 100.00 TO ACCT-MTD-AVG-BAL
+    MOVE 0 TO ACCT-YTD-FEES-CHARGED
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260630 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-YTD-FEES-CHARGED = 0
+            AND ACCT-NSF-COUNT-MTD = 0
+            AND ACCT-LEDGER-BAL = 5000.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " fees=0 bal=" ACCT-LEDGER-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " nsf-mtd=" ACCT-NSF-COUNT-MTD
+                " bal=" ACCT-LEDGER-BAL
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

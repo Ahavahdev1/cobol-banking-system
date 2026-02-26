@@ -134,8 +134,10 @@ PROCESS-EOM-ACCOUNT.
         MOVE 0 TO ACCT-YTD-INT-PAID
     END-IF
 
-    *> Step 1: Assess monthly fee (skip for frozen accounts)
-    IF ACCT-STATUS NOT = "F"
+    *> Step 1: Assess monthly fee (skip for frozen/dormant accounts
+    *> since fee posting is a debit and TXNPOST0 blocks debits
+    *> for both frozen and dormant accounts)
+    IF ACCT-STATUS NOT = "F" AND ACCT-STATUS NOT = "D"
         PERFORM EOM-ASSESS-FEE
 
         *> Step 2: Post fee if assessed
