@@ -75,6 +75,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-042
     PERFORM TEST-TP-043
     PERFORM TEST-TP-044
+    PERFORM TEST-TP-045
+    PERFORM TEST-TP-046
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1463,6 +1465,68 @@ TEST-TP-044.
     IF WS-TXN-RESULT-CODE = "E0000"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-045: Restricted account debit -> E0043
+*> Restricted accounts block debits, same as dormant/garnishment
+*> ---------------------------------------------------------------
+TEST-TP-045.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-045: Restricted acct debit -> E0043"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "R" TO ACCT-STATUS
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 100.00 TO TXN-AMOUNT
+    MOVE 0 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0043"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0043"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-046: Restricted account credit -> E0000 (allowed)
+*> Restricted accounts still accept deposits/credits
+*> ---------------------------------------------------------------
+TEST-TP-046.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-046: Restricted acct credit -> E0000"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "R" TO ACCT-STATUS
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 200.00 TO TXN-AMOUNT
+    MOVE 200.00 TO TXN-CASH-AMOUNT
+    COMPUTE WS-EXPECTED-BAL = ACCT-LEDGER-BAL + 200.00
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = WS-EXPECTED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " exp=" WS-EXPECTED-BAL
+        END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME

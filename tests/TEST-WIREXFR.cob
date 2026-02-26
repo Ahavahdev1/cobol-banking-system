@@ -74,6 +74,8 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-038
     PERFORM TEST-WR-039
     PERFORM TEST-WR-040
+    PERFORM TEST-WR-041
+    PERFORM TEST-WR-042
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1808,4 +1810,81 @@ TEST-WR-040.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0045"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-041: SEND from restricted account -> E0043
+*> Restricted accounts block outgoing wires (debit)
+*> ---------------------------------------------------------------
+TEST-WR-041.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-041: SEND restricted acct -> E0043"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "SEND" TO WS-WIRE-FUNCTION
+    MOVE 5000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "BENE NAME" TO WIRE-BENE-NAME OF WS-WIRE-RECORD
+    MOVE "US" TO WIRE-BENE-COUNTRY OF WS-WIRE-RECORD
+    MOVE "TELLER01" TO WIRE-CREATED-BY OF WS-WIRE-RECORD
+    MOVE 100000000041 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "R" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0043"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0043"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-042: RVRS incoming wire on restricted account -> E0043
+*> Reversing incoming wire = debit, restricted blocks debits
+*> ---------------------------------------------------------------
+TEST-WR-042.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-042: RVRS incoming restricted -> E0043"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "RVRS" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000042" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "I" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 3000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "CP" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE 100000000042 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 13000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 13000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "R" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0043"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0043"
     END-IF.

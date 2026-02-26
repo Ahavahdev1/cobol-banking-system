@@ -126,6 +126,13 @@ VALIDATE-ACCOUNT-STATUS.
         MOVE "Account is dormant - debits not permitted"
             TO LS-TXN-RESULT-MSG
         GOBACK
+    END-IF
+    *> Restricted accounts: debits blocked, credits allowed
+    IF ACCT-STATUS = "R" AND TXN-DR-CR = "D"
+        MOVE "E0043" TO LS-TXN-RESULT-CODE
+        MOVE "Account is restricted - debits not permitted"
+            TO LS-TXN-RESULT-MSG
+        GOBACK
     END-IF.
 
 *> ---------------------------------------------------------------

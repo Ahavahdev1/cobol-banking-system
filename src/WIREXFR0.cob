@@ -102,6 +102,12 @@ PROCESS-SEND.
             TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "R"
+        MOVE "E0043" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is restricted - wires not permitted"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Validate sufficient funds
     IF WIRE-AMOUNT > ACCT-AVAIL-BAL
@@ -339,6 +345,12 @@ PROCESS-REVERSE.
     IF ACCT-GARNISHMENT = "Y" AND WIRE-TYPE = "I"
         MOVE "E0045" TO LS-WIRE-RESULT-CODE
         MOVE "Account under garnishment - reversal blocked"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "R" AND WIRE-TYPE = "I"
+        MOVE "E0043" TO LS-WIRE-RESULT-CODE
+        MOVE "Account restricted - reversal blocked"
             TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF

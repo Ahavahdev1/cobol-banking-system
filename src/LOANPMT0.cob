@@ -85,8 +85,9 @@ PROCESS-PAYMENT.
     END-IF
     *> Validate payment amount > 0
     IF LS-PAYMENT-AMT <= ZERO
-        MOVE "E0002" TO LS-LOAN-RESULT-CODE
-        MOVE "Invalid input" TO LS-LOAN-RESULT-MSG
+        MOVE "E0032" TO LS-LOAN-RESULT-CODE
+        MOVE "Payment amount must be positive"
+            TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
     *> Check if loan is already paid off

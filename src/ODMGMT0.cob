@@ -87,6 +87,12 @@ ODMGMT0-MAIN.
             TO LS-OD-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "R"
+        MOVE "E0043" TO LS-OD-RESULT-CODE
+        MOVE "Account is restricted - OD blocked"
+            TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Determine effective balance
     MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL

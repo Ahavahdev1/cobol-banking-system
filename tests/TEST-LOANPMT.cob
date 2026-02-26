@@ -63,6 +63,7 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-039
     PERFORM TEST-LP-040
     PERFORM TEST-LP-041
+    PERFORM TEST-LP-042
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -202,11 +203,11 @@ TEST-LP-003.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> LP-004: PMNT zero amount -> E0002
+*> LP-004: PMNT zero amount -> E0032
 *> ---------------------------------------------------------------
 TEST-LP-004.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "LP-004: PMNT zero amount=E0002"
+    MOVE "LP-004: PMNT zero amount=E0032"
         TO WS-TEST-NAME
     PERFORM SETUP-LOAN-ACCOUNT
     INITIALIZE WS-LOAN-RESULT
@@ -216,13 +217,13 @@ TEST-LP-004.
     CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
                           WS-PAYMENT-AMT WS-PAYMENT-DATE
                           WS-LOAN-RESULT
-    IF WS-LOAN-RESULT-CODE = "E0002"
+    IF WS-LOAN-RESULT-CODE = "E0032"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0002 actual=" WS-LOAN-RESULT-CODE
+            " expected=E0032 actual=" WS-LOAN-RESULT-CODE
     END-IF.
 
 *> ---------------------------------------------------------------
@@ -1159,4 +1160,29 @@ TEST-LP-041.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-LOAN-RESULT-CODE " expected=E0036"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-042: PMNT negative amount -> E0032
+*> Negative payment should return specific error code, not generic
+*> ---------------------------------------------------------------
+TEST-LP-042.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-042: PMNT negative amt=E0032"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE -500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0032"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0032 actual=" WS-LOAN-RESULT-CODE
     END-IF.
