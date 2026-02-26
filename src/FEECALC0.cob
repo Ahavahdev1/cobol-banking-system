@@ -96,8 +96,11 @@ PROCESS-MONTHLY-FEE.
     END-IF
 
     *> 3. Minimum balance waiver
+    *> Use MTD low-balance watermark (lowest balance any day this
+    *> month) rather than the snapshot ledger balance at EOM, which
+    *> would allow last-day deposits to bypass the requirement.
     IF ACCT-FEE-WAIVER-CODE = "MB"
-        AND ACCT-LEDGER-BAL >= FEE-MIN-BAL-THRESHOLD
+        AND ACCT-MTD-LOW-BAL >= FEE-MIN-BAL-THRESHOLD
         MOVE "Y" TO WS-FEE-WAIVED
         MOVE "Y" TO LS-FEE-WAIVED-FLAG
         MOVE "MB" TO LS-FEE-WAIVER-REASON

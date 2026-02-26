@@ -20,6 +20,8 @@ WORKING-STORAGE SECTION.
 01  WS-LEAP-YEAR-REM4          PIC 9(4).
 01  WS-LEAP-YEAR-REM100        PIC 9(4).
 01  WS-LEAP-YEAR-REM400        PIC 9(4).
+01  WS-LATE-FEE-AMT            PIC S9(9)V99.
+01  WS-LATE-FEE-PCT            PIC 9V99 VALUE 0.05.
 
 LINKAGE SECTION.
 01  LS-LOAN-FUNCTION           PIC X(4).
@@ -245,9 +247,32 @@ CHECK-LATE.
                     TO LS-LOAN-RESULT-MSG
                 GOBACK
         END-ADD
-        *> Assess late fee if not already assessed
+        *> Assess late fee if not already assessed this cycle
         IF ACCT-LATE-FEE-ASSESSED = "N"
             MOVE "Y" TO ACCT-LATE-FEE-ASSESSED
+            *> Late fee = 5% of scheduled payment amount
+            COMPUTE WS-LATE-FEE-AMT ROUNDED =
+                ACCT-PAYMENT-AMT * WS-LATE-FEE-PCT
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                    MOVE "Arithmetic overflow on late fee calc"
+                        TO LS-LOAN-RESULT-MSG
+                    GOBACK
+            END-COMPUTE
+            IF WS-LATE-FEE-AMT > ZERO
+                ADD WS-LATE-FEE-AMT TO ACCT-PAST-DUE-AMT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                        MOVE "Overflow on late fee past due"
+                            TO LS-LOAN-RESULT-MSG
+                        GOBACK
+                END-ADD
+                ADD WS-LATE-FEE-AMT TO ACCT-YTD-FEES-CHARGED
+                    ON SIZE ERROR
+                        CONTINUE
+                END-ADD
+                MOVE WS-LATE-FEE-AMT TO LS-LOAN-INT-PORTION
+            END-IF
         END-IF
     END-IF
     MOVE "E0000" TO LS-LOAN-RESULT-CODE
@@ -273,14 +298,21 @@ CALC-PAYOFF.
         GOBACK
     END-IF
     MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
+    *> Payoff = principal + accrued interest + past-due amounts
+    *> - escrow surplus (escrow balance returned to borrower)
     COMPUTE WS-PAYOFF-AMT =
         ACCT-LEDGER-BAL + WS-ACCRUED-INT-2DP
+        + ACCT-PAST-DUE-AMT - ACCT-ESCROW-BAL
         ON SIZE ERROR
             MOVE "E0040" TO LS-LOAN-RESULT-CODE
             MOVE "Arithmetic overflow on payoff calc"
                 TO LS-LOAN-RESULT-MSG
             GOBACK
     END-COMPUTE
+    *> Floor payoff at zero (escrow surplus can't create negative payoff)
+    IF WS-PAYOFF-AMT < ZERO
+        MOVE ZERO TO WS-PAYOFF-AMT
+    END-IF
     MOVE WS-PAYOFF-AMT TO LS-LOAN-NEW-BALANCE
     MOVE "E0000" TO LS-LOAN-RESULT-CODE
     MOVE "Payoff amount calculated" TO LS-LOAN-RESULT-MSG.

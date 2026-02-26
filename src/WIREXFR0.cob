@@ -2,7 +2,9 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. WIREXFR0.
 *> ================================================================
 *> WIREXFR0 - Wire Transfer Processor
-*> Initiates, receives, reverses, and inquires on wire transfers
+*> SEND = Initiate outgoing, RECV = Process incoming,
+*> COMP = Confirm settlement (PR->CP), RVRS = Reverse,
+*> INQY = Inquiry
 *> ================================================================
 
 DATA DIVISION.
@@ -39,6 +41,8 @@ MAIN-LOGIC.
             PERFORM PROCESS-SEND
         WHEN "RECV"
             PERFORM PROCESS-RECV
+        WHEN "COMP"
+            PERFORM PROCESS-COMPLETE
         WHEN "RVRS"
             PERFORM PROCESS-REVERSE
         WHEN "INQY"
@@ -245,6 +249,41 @@ PROCESS-RECV.
     MOVE FUNCTION CURRENT-DATE(1:8) TO ACCT-LAST-TXN-DATE
     MOVE "E0000" TO LS-WIRE-RESULT-CODE
     MOVE "Wire transfer received" TO LS-WIRE-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> PROCESS-COMPLETE - Confirm settlement of outgoing wire (PR->CP)
+*> Called when correspondent bank confirms the wire has settled.
+*> ---------------------------------------------------------------
+PROCESS-COMPLETE.
+    *> Validate wire reference exists
+    IF WIRE-REFERENCE-NUM = SPACES
+        MOVE "E0099" TO LS-WIRE-RESULT-CODE
+        MOVE "Wire: invalid wire reference" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Only processing wires can be completed
+    IF WIRE-STATUS NOT = "PR"
+        MOVE "E0033" TO LS-WIRE-RESULT-CODE
+        MOVE "Only processing wires can be completed"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Only outgoing wires use COMP (incoming use RECV directly)
+    IF WIRE-TYPE NOT = "O"
+        MOVE "E0037" TO LS-WIRE-RESULT-CODE
+        MOVE "COMP only valid for outgoing wires"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Mark wire as completed
+    MOVE "CP" TO WIRE-STATUS
+    MOVE FUNCTION CURRENT-DATE(1:8) TO WIRE-VALUE-DATE
+
+    MOVE "E0000" TO LS-WIRE-RESULT-CODE
+    MOVE "Wire transfer completed" TO LS-WIRE-RESULT-MSG.
 
 *> ---------------------------------------------------------------
 *> PROCESS-REVERSE - Reverse a completed wire transfer

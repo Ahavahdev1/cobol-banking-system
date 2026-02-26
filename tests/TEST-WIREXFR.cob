@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, RVRS, INQY functions (33 tests)
+*> Tests: SEND, RECV, COMP, RVRS, INQY functions (38 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -68,6 +68,10 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-032
     PERFORM TEST-WR-033
     PERFORM TEST-WR-034
+    PERFORM TEST-WR-035
+    PERFORM TEST-WR-036
+    PERFORM TEST-WR-037
+    PERFORM TEST-WR-038
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1594,4 +1598,131 @@ TEST-WR-034.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0013"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-035: COMP on processing outgoing wire -> status = CP
+*> ---------------------------------------------------------------
+TEST-WR-035.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-035: COMP processing wire -> CP"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "COMP" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000035" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "PR" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE "O" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE 100000000035 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0000"
+        IF WIRE-STATUS OF WS-WIRE-RECORD = "CP"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" WIRE-STATUS OF WS-WIRE-RECORD
+                " expected=CP"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-036: COMP on non-processing wire -> E0033
+*> ---------------------------------------------------------------
+TEST-WR-036.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-036: COMP non-PR wire -> E0033"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "COMP" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000036" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "CP" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE "O" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0033"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0033"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-037: COMP on incoming wire -> E0037
+*> COMP only valid for outgoing wires
+*> ---------------------------------------------------------------
+TEST-WR-037.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-037: COMP incoming wire -> E0037"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "COMP" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000037" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE "PR" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE "I" TO WIRE-TYPE OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0037"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0037"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-038: COMP with missing reference -> E0099
+*> ---------------------------------------------------------------
+TEST-WR-038.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-038: COMP missing ref -> E0099"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "COMP" TO WS-WIRE-FUNCTION
+    MOVE SPACES TO WIRE-REFERENCE-NUM OF WS-WIRE-RECORD
+    MOVE "PR" TO WIRE-STATUS OF WS-WIRE-RECORD
+    MOVE "O" TO WIRE-TYPE OF WS-WIRE-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0099"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0099"
     END-IF.

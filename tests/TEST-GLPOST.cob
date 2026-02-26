@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL, INIT, CRPT functions (22 tests)
+*> Tests: POST, TBAL, INIT, CRPT functions (25 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -91,6 +91,9 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-020
     PERFORM TEST-GL-021
     PERFORM TEST-GL-022
+    PERFORM TEST-GL-023
+    PERFORM TEST-GL-024
+    PERFORM TEST-GL-025
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -520,6 +523,7 @@ TEST-GL-013.
     MOVE 200.00 TO WS-GLE-AMOUNT
     MOVE "Contra debit test" TO WS-GLE-DESCRIPTION
     MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 4010 TO GL-ACCOUNT-NUM
     MOVE "A" TO GL-STATUS
     MOVE "L" TO GL-ACCT-TYPE
     MOVE "C" TO GL-NORMAL-BALANCE
@@ -893,4 +897,132 @@ TEST-GL-022.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0063 actual=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-023: FEE posting — credit-normal deposit GL on DR side
+*> should SUBTRACT from balance (fee debits deposit liability)
+*> Entry: DR=4010(deposits) CR=7500(fee income) $50
+*> GL-RECORD is the 4010 deposit account (credit-normal)
+*> Since GL-ACCOUNT-NUM=4010=LS-GLE-DR-ACCT → SUBTRACT
+*> ---------------------------------------------------------------
+TEST-GL-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-023: CR-norm DR side SUBTRACTs" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 4010 TO WS-GLE-DR-ACCT
+    MOVE 7500 TO WS-GLE-CR-ACCT
+    MOVE 50.00 TO WS-GLE-AMOUNT
+    MOVE "Fee debit deposits" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 4010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "L" TO GL-ACCT-TYPE
+    MOVE "C" TO GL-NORMAL-BALANCE
+    MOVE 5000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CURRENT-BAL = 4950.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=4950 actual=" GL-CURRENT-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-024: INT posting — credit-normal deposit GL on CR side
+*> should ADD to balance (interest credits deposit liability)
+*> Entry: DR=8010(int expense) CR=4010(deposits) $75
+*> GL-RECORD is the 4010 deposit account (credit-normal)
+*> Since GL-ACCOUNT-NUM=4010≠LS-GLE-DR-ACCT(8010) → ELSE → ADD
+*> ---------------------------------------------------------------
+TEST-GL-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-024: CR-norm CR side ADDs" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 8010 TO WS-GLE-DR-ACCT
+    MOVE 4010 TO WS-GLE-CR-ACCT
+    MOVE 75.00 TO WS-GLE-AMOUNT
+    MOVE "Interest credits deposits" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 4010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "L" TO GL-ACCT-TYPE
+    MOVE "C" TO GL-NORMAL-BALANCE
+    MOVE 5000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CURRENT-BAL = 5075.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=5075 actual=" GL-CURRENT-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-025: Debit-normal account on CR side should SUBTRACT
+*> Entry: DR=7500(fee income) CR=1010(cash) $30
+*> GL-RECORD is the 1010 cash account (debit-normal)
+*> Since GL-ACCOUNT-NUM=1010=LS-GLE-CR-ACCT → SUBTRACT
+*> ---------------------------------------------------------------
+TEST-GL-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-025: DR-norm CR side SUBTRACTs" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 7500 TO WS-GLE-DR-ACCT
+    MOVE 1010 TO WS-GLE-CR-ACCT
+    MOVE 30.00 TO WS-GLE-AMOUNT
+    MOVE "Fee income credits cash" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE 1010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "D" TO GL-NORMAL-BALANCE
+    MOVE 2000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF GL-CURRENT-BAL = 1970.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=1970 actual=" GL-CURRENT-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-GL-RESULT-CODE
     END-IF.

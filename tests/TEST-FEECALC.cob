@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-FEECALC.
 *> ================================================================
 *> TEST-FEECALC - Test suite for FEECALC0 Fee Assessment Engine
 *> Tests: Monthly fees, waivers, NSF fees, de minimis, YTD tracking
-*> 17 tests (FE-001 to FE-017)
+*> 19 tests (FE-001 to FE-019)
 *> ================================================================
 
 DATA DIVISION.
@@ -51,6 +51,8 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-015
     PERFORM TEST-FE-016
     PERFORM TEST-FE-017
+    PERFORM TEST-FE-018
+    PERFORM TEST-FE-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -115,6 +117,7 @@ TEST-FE-002.
     INITIALIZE WS-FEE-RESULT
     MOVE 1500.00 TO ACCT-LEDGER-BAL
     MOVE 1500.00 TO ACCT-AVAIL-BAL
+    MOVE 1500.00 TO ACCT-MTD-LOW-BAL
     MOVE "A" TO ACCT-STATUS
     MOVE "DDA1" TO ACCT-PRODUCT-CODE
     MOVE 12.00 TO ACCT-MONTHLY-FEE
@@ -200,6 +203,7 @@ TEST-FE-004.
     INITIALIZE WS-FEE-RESULT
     MOVE 1500.00 TO ACCT-LEDGER-BAL
     MOVE 1500.00 TO ACCT-AVAIL-BAL
+    MOVE 1500.00 TO ACCT-MTD-LOW-BAL
     MOVE "A" TO ACCT-STATUS
     MOVE "DDA1" TO ACCT-PRODUCT-CODE
     MOVE 12.00 TO ACCT-MONTHLY-FEE
@@ -527,6 +531,7 @@ TEST-FE-012.
     INITIALIZE WS-FEE-RESULT
     MOVE 1500.00 TO ACCT-LEDGER-BAL
     MOVE 1500.00 TO ACCT-AVAIL-BAL
+    MOVE 1500.00 TO ACCT-MTD-LOW-BAL
     MOVE "A" TO ACCT-STATUS
     MOVE "DDA1" TO ACCT-PRODUCT-CODE
     MOVE 12.00 TO ACCT-MONTHLY-FEE
@@ -741,6 +746,102 @@ TEST-FE-017.
                 " today=" ACCT-NSF-COUNT-TODAY
                 " mtd=" ACCT-NSF-COUNT-MTD
                 " ytd=" ACCT-NSF-COUNT-YTD
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-018: MB waiver fails when MTD-LOW-BAL < threshold
+*>         despite high current ledger balance (last-day deposit)
+*>         Ledger=$5000, MTD-LOW-BAL=$200, threshold=$1500
+*>         -> fee assessed (not waived)
+*> ---------------------------------------------------------------
+TEST-FE-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-018: MB waiver fail low MTD-LOW-BAL"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 200.00 TO ACCT-MTD-LOW-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE "MB" TO ACCT-FEE-WAIVER-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "Y" TO FEE-WAIVER-ELIGIBLE
+    MOVE 1500.00 TO FEE-MIN-BAL-THRESHOLD
+    MOVE "N" TO FEE-DD-WAIVER
+    MOVE "N" TO FEE-EMPLOYEE-WAIVER
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0000"
+        IF WS-FEE-ASSESSED = 12.00
+            AND WS-FEE-WAIVED-FLAG = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " fee=" WS-FEE-ASSESSED
+                " waived=" WS-FEE-WAIVED-FLAG
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-019: MB waiver succeeds when MTD-LOW-BAL >= threshold
+*>         Ledger=$500, MTD-LOW-BAL=$1600, threshold=$1500
+*>         (MTD low was high, but ledger dropped after fees)
+*>         -> fee waived (MB)
+*> ---------------------------------------------------------------
+TEST-FE-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-019: MB waiver pass MTD-LOW-BAL ok"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE 500.00 TO ACCT-AVAIL-BAL
+    MOVE 1600.00 TO ACCT-MTD-LOW-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE "MB" TO ACCT-FEE-WAIVER-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "Y" TO FEE-WAIVER-ELIGIBLE
+    MOVE 1500.00 TO FEE-MIN-BAL-THRESHOLD
+    MOVE "N" TO FEE-DD-WAIVER
+    MOVE "N" TO FEE-EMPLOYEE-WAIVER
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0000"
+        IF WS-FEE-WAIVED-FLAG = "Y"
+            AND WS-FEE-WAIVER-REASON = "MB"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " waived=" WS-FEE-WAIVED-FLAG
+                " reason=" WS-FEE-WAIVER-REASON
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

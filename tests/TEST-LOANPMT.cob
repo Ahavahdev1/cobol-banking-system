@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (24 tests)
+*> Tests: Payments, late checks, payoff, edge cases (29 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,9 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-032
     PERFORM TEST-LP-033
     PERFORM TEST-LP-034
+    PERFORM TEST-LP-035
+    PERFORM TEST-LP-036
+    PERFORM TEST-LP-037
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -662,11 +665,12 @@ TEST-LP-026.
 *> ---------------------------------------------------------------
 *> LP-027: Multiple missed payments accumulate past-due
 *>         existing past-due=500, scheduled pmt=500
-*>         LATE call -> past-due should be 1000
+*>         LATE call -> past-due = 500 + 500 + late fee (5%*500=25)
+*>         = 1025.00
 *> ---------------------------------------------------------------
 TEST-LP-027.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "LP-027: LATE accumulates past-due"
+    MOVE "LP-027: LATE accumulates past-due+fee"
         TO WS-TEST-NAME
     PERFORM SETUP-LOAN-ACCOUNT
     MOVE "L" TO ACCT-TYPE
@@ -683,7 +687,7 @@ TEST-LP-027.
                           WS-PAYMENT-AMT WS-PAYMENT-DATE
                           WS-LOAN-RESULT
     IF WS-LOAN-RESULT-CODE = "E0000"
-        IF ACCT-PAST-DUE-AMT = 1000.00
+        IF ACCT-PAST-DUE-AMT = 1025.00
             ADD 1 TO WS-PASS-COUNT
             DISPLAY "  PASS: " WS-TEST-NAME
                 " past-due=" ACCT-PAST-DUE-AMT
@@ -691,7 +695,7 @@ TEST-LP-027.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " past-due=" ACCT-PAST-DUE-AMT
-                " expected=1000.00"
+                " expected=1025.00"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
@@ -896,6 +900,125 @@ TEST-LP-034.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " last-txn=" ACCT-LAST-TXN-DATE
                 " expected=20260315"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-035: POFF includes past-due and subtracts escrow
+*>         bal=10000, accrued=100, past-due=500, escrow=200
+*>         payoff = 10000 + 100 + 500 - 200 = 10400
+*> ---------------------------------------------------------------
+TEST-LP-035.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-035: POFF with past-due and escrow"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 100.000000 TO ACCT-ACCRUED-INT
+    MOVE 500.00 TO ACCT-PAST-DUE-AMT
+    MOVE 200.00 TO ACCT-ESCROW-BAL
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "POFF" TO WS-LOAN-FUNCTION
+    MOVE ZERO TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF WS-LOAN-NEW-BALANCE = 10400.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " payoff=" WS-LOAN-NEW-BALANCE
+                " expected=10400.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-036: LATE fee amount reported in INT-PORTION
+*>         payment=$500, late fee = 5% * 500 = $25
+*>         INT-PORTION should be 25.00
+*> ---------------------------------------------------------------
+TEST-LP-036.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-036: LATE fee in INT-PORTION"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 500.00 TO ACCT-PAYMENT-AMT
+    MOVE 20260215 TO ACCT-NEXT-PMT-DATE
+    MOVE "N" TO ACCT-LATE-FEE-ASSESSED
+    MOVE 0 TO ACCT-PAST-DUE-AMT
+    MOVE 0 TO ACCT-PAST-DUE-DAYS
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "LATE" TO WS-LOAN-FUNCTION
+    MOVE ZERO TO WS-PAYMENT-AMT
+    MOVE 20260401 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF WS-LOAN-INT-PORTION = 25.00
+            AND ACCT-YTD-FEES-CHARGED = 25.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " int-portion=" WS-LOAN-INT-PORTION
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-037: POFF escrow surplus floors at zero
+*>         bal=100, accrued=0, past-due=0, escrow=500
+*>         raw = 100 + 0 + 0 - 500 = -400, floored to 0
+*> ---------------------------------------------------------------
+TEST-LP-037.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-037: POFF escrow surplus floors at 0"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-ACCRUED-INT
+    MOVE 0 TO ACCT-PAST-DUE-AMT
+    MOVE 500.00 TO ACCT-ESCROW-BAL
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "POFF" TO WS-LOAN-FUNCTION
+    MOVE ZERO TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF WS-LOAN-NEW-BALANCE = ZERO
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " payoff=" WS-LOAN-NEW-BALANCE
+                " expected=0"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

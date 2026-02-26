@@ -159,12 +159,14 @@ DO-AGGR.
         GOBACK
     END-IF
 
+    *> 31 CFR 1010.311: CTR required for cash "in excess of"
+    *> $10,000 — strictly greater than, not equal.
     EVALUATE TRUE
-        WHEN CTR-CASH-IN-TOTAL >= WS-CTR-THRESHOLD
+        WHEN CTR-CASH-IN-TOTAL > WS-CTR-THRESHOLD
             MOVE "Y" TO LS-BSA-CTR-REQUIRED
             MOVE "CTR required - cash in threshold"
                 TO LS-BSA-RESULT-MSG
-        WHEN CTR-CASH-OUT-TOTAL >= WS-CTR-THRESHOLD
+        WHEN CTR-CASH-OUT-TOTAL > WS-CTR-THRESHOLD
             MOVE "Y" TO LS-BSA-CTR-REQUIRED
             MOVE "CTR required - cash out threshold"
                 TO LS-BSA-RESULT-MSG
