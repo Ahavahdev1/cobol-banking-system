@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (22 tests)
+*> Tests: Payments, late checks, payoff, edge cases (23 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-028
     PERFORM TEST-LP-029
     PERFORM TEST-LP-030
+    PERFORM TEST-LP-031
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -785,4 +786,32 @@ TEST-LP-030.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0011 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-031: PMNT on escheated loan returns E0050
+*> ---------------------------------------------------------------
+TEST-LP-031.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-031: PMNT escheated loan=E0050"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "LN" TO ACCT-SUB-TYPE
+    MOVE "E" TO ACCT-STATUS
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0050"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0050 actual=" WS-LOAN-RESULT-CODE
     END-IF.

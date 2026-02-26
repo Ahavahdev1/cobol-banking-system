@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (36 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (37 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -12,6 +12,7 @@ WORKING-STORAGE SECTION.
 01  WS-FAIL-COUNT          PIC 9(3) VALUE 0.
 01  WS-TEST-NAME           PIC X(40).
 01  WS-EXPECTED-BAL        PIC S9(13)V99.
+01  WS-EXPECTED-PENALTY    PIC S9(9)V99.
 
 *> TXNPOST0 LINKAGE replicated in working storage
 COPY CPYTXN.
@@ -67,6 +68,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-034
     PERFORM TEST-TP-035
     PERFORM TEST-TP-037
+    PERFORM TEST-TP-038
+    PERFORM TEST-TP-039
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1236,6 +1239,79 @@ TEST-TP-037.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " bal=" ACCT-LEDGER-BAL
                 " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-038: Escheated account returns E0050
+*> ---------------------------------------------------------------
+TEST-TP-038.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-038: Escheated account -> E0050" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE "E" TO ACCT-STATUS
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 100.00 TO TXN-AMOUNT
+    MOVE 0 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0050"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-039: CD penalty amount verification
+*> CD acct, bal=10000, rate=5.00, penalty-days=90,
+*> maturity=20270101, post=20260601 (before maturity)
+*> Penalty = (5/100/365) * 10000 * 90 = 123.29 (rounded)
+*> ---------------------------------------------------------------
+TEST-TP-039.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-039: CD penalty amt=123.29" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CD
+    *> Override CD params for this specific test
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE 090 TO ACCT-CD-EARLY-WD-PEN
+    MOVE 20270101 TO ACCT-MATURITY-DATE
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 5000.00 TO TXN-AMOUNT
+    MOVE 5000.00 TO TXN-CASH-AMOUNT
+    *> Post date before maturity with penalty acknowledgment
+    MOVE 20260601 TO TXN-POST-DATE
+    MOVE 20260601 TO TXN-EFFECTIVE-DATE
+    MOVE "Y" TO TXN-CD-EARLY-WD
+    *> Expected penalty = (5/100/365) * 10000 * 90 = 123.29
+    MOVE 123.29 TO WS-EXPECTED-PENALTY
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF TXN-CD-PENALTY-AMT = WS-EXPECTED-PENALTY
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " penalty=" TXN-CD-PENALTY-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " penalty=" TXN-CD-PENALTY-AMT
+                " expected=123.29"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

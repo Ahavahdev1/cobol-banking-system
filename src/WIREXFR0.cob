@@ -75,6 +75,11 @@ PROCESS-SEND.
         MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-LEGAL-HOLD = "Y"
         MOVE "E0035" TO LS-WIRE-RESULT-CODE
         MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
@@ -110,6 +115,12 @@ PROCESS-SEND.
         IF WIRE-APPROVED-BY = SPACES
             MOVE "E0098" TO LS-WIRE-RESULT-CODE
             MOVE "Wire: approval required for amount >= 50000"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+        END-IF
+        IF WIRE-APPROVED-BY = WIRE-CREATED-BY
+            MOVE "E0098" TO LS-WIRE-RESULT-CODE
+            MOVE "Wire approver must differ from creator"
                 TO LS-WIRE-RESULT-MSG
             GOBACK
         END-IF
@@ -166,6 +177,11 @@ PROCESS-RECV.
     IF ACCT-DECEASED = "Y"
         MOVE "E0036" TO LS-WIRE-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
     *> Legal hold does NOT block incoming credits (only debits)
@@ -245,6 +261,11 @@ PROCESS-REVERSE.
     IF ACCT-DECEASED = "Y"
         MOVE "E0036" TO LS-WIRE-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
     IF ACCT-LEGAL-HOLD = "Y" AND WIRE-TYPE = "I"

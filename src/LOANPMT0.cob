@@ -71,6 +71,11 @@ PROCESS-PAYMENT.
         MOVE "Account is closed" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     *> Validate payment amount > 0
     IF LS-PAYMENT-AMT <= ZERO
         MOVE "E0002" TO LS-LOAN-RESULT-CODE

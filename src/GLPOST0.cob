@@ -9,6 +9,7 @@ PROGRAM-ID. GLPOST0.
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 01  WS-SAVE-GL-BAL               PIC S9(15)V99.
+01  WS-SAVE-GL-MTD               PIC S9(15)V99.
 
 LINKAGE SECTION.
 01  LS-FUNCTION                   PIC X(4).
@@ -94,6 +95,7 @@ POST-GL-ENTRY.
                         TO LS-GL-RESULT-MSG
                     EXIT PARAGRAPH
             END-ADD
+            MOVE GL-MTD-DEBITS TO WS-SAVE-GL-MTD
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
                 ON SIZE ERROR
                     MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
@@ -105,6 +107,7 @@ POST-GL-ENTRY.
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
                 ON SIZE ERROR
                     MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
+                    MOVE WS-SAVE-GL-MTD TO GL-MTD-DEBITS
                     MOVE "E0040" TO LS-GL-RESULT-CODE
                     MOVE "Arithmetic overflow on YTD accumulator"
                         TO LS-GL-RESULT-MSG
@@ -122,6 +125,7 @@ POST-GL-ENTRY.
                             TO LS-GL-RESULT-MSG
                         EXIT PARAGRAPH
                 END-SUBTRACT
+                MOVE GL-MTD-DEBITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
                     ON SIZE ERROR
                         MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
@@ -133,6 +137,7 @@ POST-GL-ENTRY.
                 ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
                     ON SIZE ERROR
                         MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
+                        MOVE WS-SAVE-GL-MTD TO GL-MTD-DEBITS
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on YTD accumulator"
                             TO LS-GL-RESULT-MSG
@@ -148,6 +153,7 @@ POST-GL-ENTRY.
                             TO LS-GL-RESULT-MSG
                         EXIT PARAGRAPH
                 END-ADD
+                MOVE GL-MTD-CREDITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
                     ON SIZE ERROR
                         MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
@@ -159,6 +165,7 @@ POST-GL-ENTRY.
                 ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
                     ON SIZE ERROR
                         MOVE WS-SAVE-GL-BAL TO GL-CURRENT-BAL
+                        MOVE WS-SAVE-GL-MTD TO GL-MTD-CREDITS
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on YTD accumulator"
                             TO LS-GL-RESULT-MSG

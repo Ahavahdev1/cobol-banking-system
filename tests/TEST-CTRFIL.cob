@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-CTRFIL.
 *> ================================================================
 *> TEST-CTRFIL - Test suite for CTRFIL0 CTR Filing Manager
-*> Tests: Create, file, query, void CTR records (11 tests)
+*> Tests: Create, file, query, void CTR records (12 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -35,6 +35,7 @@ MAIN-PROGRAM.
     PERFORM TEST-CT-009
     PERFORM TEST-CT-010
     PERFORM TEST-CT-011
+    PERFORM TEST-CT-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -352,4 +353,33 @@ TEST-CT-011.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-CTR-RESULT-CODE " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CT-012: CRTE with zero cash amounts -> E0003
+*> Both CTR-CASH-IN-TOTAL and CTR-CASH-OUT-TOTAL are zero
+*> ---------------------------------------------------------------
+TEST-CT-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CT-012: CRTE zero cash amounts -> E0003"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-CTR-RESULT
+    MOVE "CRTE" TO WS-CTR-FUNCTION
+    MOVE 1000000001 TO CTR-CUST-ID
+    MOVE "ZERO CASH TEST" TO CTR-CUST-NAME
+    MOVE 0 TO CTR-CASH-IN-TOTAL
+    MOVE 0 TO CTR-CASH-OUT-TOTAL
+    MOVE 20260215 TO CTR-TXN-DATE
+    MOVE 1001 TO CTR-BRANCH-ID
+    MOVE "TELLER01" TO CTR-TELLER-ID
+    CALL "CTRFIL0" USING WS-CTR-FUNCTION CTR-RECORD
+                         WS-CTR-RESULT
+    IF WS-CTR-RESULT-CODE = "E0003"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-CTR-RESULT-CODE " expected=E0003"
     END-IF.
