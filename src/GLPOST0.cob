@@ -46,7 +46,17 @@ PROCEDURE DIVISION USING LS-FUNCTION
     GOBACK.
 
 *> ----------------------------------------------------------------
-*> POST-GL-ENTRY - Post a double-entry GL posting
+*> POST-GL-ENTRY - Post one side of a double-entry GL journal
+*> ----------------------------------------------------------------
+*> IMPORTANT: Double-entry bookkeeping requires two POST calls per
+*> journal entry - one for the debit-side GL account and one for the
+*> credit-side GL account. The caller is responsible for ensuring
+*> both sides are posted. Use TBAL to verify trial balance.
+*>
+*> Example (caller pseudocode):
+*>   1. CALL GLPOST0 "POST" with GL-RECORD = debit account
+*>   2. CALL GLPOST0 "POST" with GL-RECORD = credit account
+*>   3. CALL GLPOST0 "TBAL" to verify debits = credits
 *> ----------------------------------------------------------------
 POST-GL-ENTRY.
     *> Check account status

@@ -183,6 +183,8 @@ DETERMINE-DEPOSIT-GL.
             MOVE 0000004030 TO WS-DEPOSIT-GL
         WHEN "MM"
             MOVE 0000004040 TO WS-DEPOSIT-GL
+        WHEN "CD"
+            MOVE 0000004050 TO WS-DEPOSIT-GL
     END-EVALUATE.
 
 *> ---------------------------------------------------------------

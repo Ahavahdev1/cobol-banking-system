@@ -123,7 +123,7 @@ PROCESS-NSF-FEE.
     END-IF
 
     *> Daily cap check
-    IF ACCT-NSF-COUNT-MTD >= FEE-NSF-DAILY-MAX
+    IF ACCT-NSF-COUNT-TODAY >= FEE-NSF-DAILY-MAX
         MOVE "No fee - daily cap reached" TO LS-FEE-RESULT-MSG
         GO TO PROCESS-NSF-FEE-EXIT
     END-IF

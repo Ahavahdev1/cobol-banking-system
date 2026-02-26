@@ -168,6 +168,7 @@ EOM-POST-FEE.
 *> ---------------------------------------------------------------
 EOM-RESET-MTD.
     MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
     MOVE 0 TO ACCT-MTD-AVG-BAL
     MOVE 0 TO ACCT-MTD-LOW-BAL.
 

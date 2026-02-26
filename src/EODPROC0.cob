@@ -264,4 +264,6 @@ EOD-RELEASE-HOLDS.
         COMPUTE ACCT-AVAIL-BAL =
             ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
         ADD 1 TO WS-HOLDS-RELEASED
-    END-IF.
+    END-IF
+    *> Reset daily NSF counter for next business day
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY.

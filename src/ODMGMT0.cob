@@ -38,7 +38,7 @@ ODMGMT0-MAIN.
     MOVE "N" TO LS-OD-APPROVED
     MOVE ZEROS TO LS-OD-FEE-ASSESSED
     MOVE ZEROS TO LS-OD-TRANSFER-AMT
-    MOVE ACCT-NSF-COUNT-MTD TO LS-OD-NEW-NSF-COUNT
+    MOVE ACCT-NSF-COUNT-TODAY TO LS-OD-NEW-NSF-COUNT
 
     *> Determine effective balance
     IF ACCT-AVAIL-BAL NOT = ZEROS
@@ -97,14 +97,15 @@ ODMGMT0-MAIN.
             MOVE ZEROS TO LS-OD-FEE-ASSESSED
         ELSE
             *> Daily cap check
-            IF ACCT-NSF-COUNT-MTD >= WS-NSF-DAILY-MAX
+            IF ACCT-NSF-COUNT-TODAY >= WS-NSF-DAILY-MAX
                 MOVE ZEROS TO LS-OD-FEE-ASSESSED
             ELSE
                 MOVE WS-NSF-FEE-AMOUNT TO LS-OD-FEE-ASSESSED
             END-IF
         END-IF
-        *> Increment NSF count
+        *> Increment daily and monthly NSF counts
         ADD 1 TO LS-OD-NEW-NSF-COUNT
+        ADD 1 TO ACCT-NSF-COUNT-MTD
     END-IF
 
     MOVE "E0000" TO LS-OD-RESULT-CODE

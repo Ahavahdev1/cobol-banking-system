@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL functions (13 tests)
+*> Tests: POST, TBAL functions (14 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -30,6 +30,33 @@ COPY CPYGL REPLACING ==:PREFIX:== BY ==WS==.
     05  WS-GL-RESULT-CODE    PIC X(5).
     05  WS-GL-RESULT-MSG     PIC X(50).
 
+*> Second GL record for credit-side in double-entry tests
+01  WS-GL-RECORD-CR.
+    05  WS-CR-KEY.
+        10  WS-CR-ACCOUNT-NUM     PIC 9(10).
+        10  WS-CR-COST-CENTER     PIC 9(4).
+    05  WS-CR-CLASSIFICATION.
+        10  WS-CR-ACCT-TYPE       PIC X(1).
+        10  WS-CR-ACCT-SUBTYPE    PIC X(4).
+        10  WS-CR-ACCT-NAME       PIC X(40).
+        10  WS-CR-NORMAL-BALANCE  PIC X(1).
+        10  WS-CR-CALL-RPT-LINE   PIC X(6).
+    05  WS-CR-BALANCES.
+        10  WS-CR-CURRENT-BAL     PIC S9(15)V99.
+        10  WS-CR-MTD-DEBITS      PIC S9(15)V99.
+        10  WS-CR-MTD-CREDITS     PIC S9(15)V99.
+        10  WS-CR-YTD-DEBITS      PIC S9(15)V99.
+        10  WS-CR-YTD-CREDITS     PIC S9(15)V99.
+        10  WS-CR-PRIOR-MONTH-BAL PIC S9(15)V99.
+        10  WS-CR-PRIOR-YEAR-BAL  PIC S9(15)V99.
+        10  WS-CR-BUDGET-BAL      PIC S9(15)V99.
+    05  WS-CR-CONTROL-FIELDS.
+        10  WS-CR-STATUS          PIC X(1).
+        10  WS-CR-AUTO-POST       PIC X(1).
+        10  WS-CR-RECONCILE-TYPE  PIC X(1).
+        10  WS-CR-LAST-POST-DATE  PIC 9(8).
+        10  WS-CR-LAST-RECON-DATE PIC 9(8).
+
 *> Saved values for accumulator tests
 01  WS-SAVED-MTD-DR       PIC S9(15)V99.
 01  WS-SAVED-MTD-CR       PIC S9(15)V99.
@@ -55,6 +82,7 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-011
     PERFORM TEST-GL-012
     PERFORM TEST-GL-013
+    PERFORM TEST-GL-014
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -503,4 +531,96 @@ TEST-GL-013.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-014: Double-entry POST both sides, TBAL confirms balance
+*> Demonstrates correct two-call pattern: POST debit account,
+*> then POST credit account, then TBAL to verify balance.
+*> ---------------------------------------------------------------
+TEST-GL-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-014: Double-entry POST + TBAL" TO WS-TEST-NAME
+
+    *> --- Step 1: POST debit side (Asset account, debit-normal) ---
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 2010 TO WS-GLE-CR-ACCT
+    MOVE 1000.00 TO WS-GLE-AMOUNT
+    MOVE "Double-entry DR side" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    *> Set up GL-RECORD as debit-normal asset account
+    MOVE 1010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "D" TO GL-NORMAL-BALANCE
+    MOVE "A" TO GL-STATUS
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " DR POST result=" WS-GL-RESULT-CODE
+        EXIT PARAGRAPH
+    END-IF
+    *> Save debit-side MTD-DEBITS for trial balance
+    MOVE GL-MTD-DEBITS TO WS-SAVED-MTD-DR
+
+    *> --- Step 2: POST credit side (Liability account, cr-normal) -
+    *> Copy credit-side record into WS-GL-RECORD-CR for reference,
+    *> then load GL-RECORD with credit account data for the call.
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 2010 TO WS-GLE-CR-ACCT
+    MOVE 1000.00 TO WS-GLE-AMOUNT
+    MOVE "Double-entry CR side" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    *> Set up GL-RECORD as credit-normal liability account
+    MOVE 2010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "L" TO GL-ACCT-TYPE
+    MOVE "C" TO GL-NORMAL-BALANCE
+    MOVE "A" TO GL-STATUS
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE NOT = "E0000"
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " CR POST result=" WS-GL-RESULT-CODE
+        EXIT PARAGRAPH
+    END-IF
+    *> Save credit-side MTD-CREDITS for trial balance
+    MOVE GL-MTD-CREDITS TO WS-SAVED-MTD-CR
+
+    *> --- Step 3: TBAL with both sides -> balanced ---
+    INITIALIZE WS-GL-RESULT
+    MOVE "TBAL" TO WS-FUNCTION
+    MOVE WS-SAVED-MTD-DR TO WS-TB-TOTAL-DEBITS
+    MOVE WS-SAVED-MTD-CR TO WS-TB-TOTAL-CREDITS
+    MOVE ZERO TO WS-TB-DIFFERENCE
+    MOVE SPACES TO WS-TB-IS-BALANCED
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF WS-TB-IS-BALANCED = "Y"
+            AND WS-TB-DIFFERENCE = ZERO
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " balanced=" WS-TB-IS-BALANCED
+                " diff=" WS-TB-DIFFERENCE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " TBAL result=" WS-GL-RESULT-CODE
     END-IF.

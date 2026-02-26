@@ -65,6 +65,7 @@
         10  ACCT-OD-OPTED-IN       PIC X(1).
         *> Y/N - Reg E opt-in for ATM/one-time debit
         10  ACCT-NSF-COUNT-MTD     PIC 9(3).
+        10  ACCT-NSF-COUNT-TODAY   PIC 9(2).
         10  ACCT-NSF-COUNT-YTD     PIC 9(5).
     05  ACCT-FEE-INFO.
         10  ACCT-MONTHLY-FEE       PIC 9(5)V99.
