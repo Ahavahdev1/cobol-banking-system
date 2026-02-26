@@ -4,7 +4,7 @@ PROGRAM-ID. TEST-BSAAML.
 *> TEST-BSAAML - Test suite for BSACTRO BSA/AML CTR Generator
 *> Tests: CTR threshold, aggregation, exemptions, cash direction,
 *> structuring boundary detection, cross-account aggregation
-*> 15 tests (BA-001 to BA-015)
+*> 17 tests (BA-001 to BA-017)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BA-014
     PERFORM TEST-BA-015
     PERFORM TEST-BA-016
+    PERFORM TEST-BA-017
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -680,6 +681,47 @@ TEST-BA-016.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " CTR-required=" WS-BSA-CTR-REQUIRED
                 " expected=N"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-017: AGGR with exempt customer -> totals accumulate, no CTR
+*> Exempt flag bypasses CTR requirement but aggregation still runs
+*> ---------------------------------------------------------------
+TEST-BA-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-017: AGGR exempt -> totals kept, no CTR"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "AGGR" TO WS-FUNCTION
+    MOVE 1000000001 TO WS-BSA-CUST-ID
+    MOVE 20260215 TO WS-BSA-TXN-DATE
+    MOVE 15000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "I" TO WS-BSA-CASH-DIRECTION
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 100000000001 TO WS-BSA-ACCT-NUMBER
+    *> Set exempt flag
+    MOVE "Y" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0000"
+        IF WS-BSA-CTR-REQUIRED = "N"
+            AND WS-BSA-CASH-IN-TOTAL = 15000.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " in-total=" WS-BSA-CASH-IN-TOTAL
+                " ctr=" WS-BSA-CTR-REQUIRED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " in-total=" WS-BSA-CASH-IN-TOTAL
+                " ctr=" WS-BSA-CTR-REQUIRED
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

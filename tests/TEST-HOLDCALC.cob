@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-HOLDCALC.
 *> ================================================================
 *> TEST-HOLDCALC - Test suite for HOLDCALC0 Reg CC Hold Calc
 *> Tests: Local/non-local checks, treasury, large deposits, cash,
-*>        wire, new accounts, exceptions (17 tests HC-001 to HC-017)
+*>        wire, new accounts, exceptions (18 tests HC-001 to HC-018)
 *> ================================================================
 
 DATA DIVISION.
@@ -59,6 +59,7 @@ MAIN-PROGRAM.
     PERFORM TEST-HC-015
     PERFORM TEST-HC-016
     PERFORM TEST-HC-017
+    PERFORM TEST-HC-018
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -699,6 +700,52 @@ TEST-HC-017.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " nxt=" WS-HOLD-NEXT-DAY-AMT
                 " rem=" WS-HOLD-REMAINING-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-018: Treasury check on new account -> exception hold
+*> Reg CC 229.13: new account (<30 days) gets +7 exception days
+*> Treasury base=2 + exception=7 = 9 business days total hold
+*> ---------------------------------------------------------------
+TEST-HC-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-018: Treasury + new acct exception"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 10000.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "TR" TO WS-HR-CHECK-TYPE
+    MOVE 20260215 TO WS-HR-DEPOSIT-DATE
+    *> Account opened 10 days ago (< 30 = new account)
+    MOVE 20260205 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    MOVE 5525.00 TO WS-EXPECTED-NEXT-DAY
+    MOVE 4475.00 TO WS-EXPECTED-REMAINDER
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-NEXT-DAY-AMT = WS-EXPECTED-NEXT-DAY
+            AND WS-HOLD-REMAINING-AMT = WS-EXPECTED-REMAINDER
+            AND WS-HOLD-EXCEPTION-FLAG = "Y"
+            AND WS-HOLD-RELEASE-DT > 20260215
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+                " rel=" WS-HOLD-RELEASE-DT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " exc=" WS-HOLD-EXCEPTION-FLAG
+                " rel=" WS-HOLD-RELEASE-DT
+                " nxt=" WS-HOLD-NEXT-DAY-AMT
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
