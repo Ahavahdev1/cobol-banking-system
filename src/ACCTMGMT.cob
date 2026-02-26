@@ -199,6 +199,20 @@ CLOSE-ACCOUNT.
         EXIT PARAGRAPH
     END-IF
 
+    IF ACCT-PAST-DUE-AMT NOT = 0
+        MOVE "E0048" TO LS-ACCT-RESULT-CODE
+        MOVE "Account has past-due amount"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
+    IF ACCT-ESCROW-BAL NOT = 0
+        MOVE "E0049" TO LS-ACCT-RESULT-CODE
+        MOVE "Account has escrow balance"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE-DATA
 
     MOVE "C" TO ACCT-STATUS
