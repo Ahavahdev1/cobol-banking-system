@@ -112,6 +112,13 @@ VALIDATE-ACCOUNT-STATUS.
         MOVE "Account holder is deceased" TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF
+    *> Garnishment blocks all debits — court order freezes outflows
+    IF ACCT-GARNISHMENT = "Y" AND TXN-DR-CR = "D"
+        MOVE "E0045" TO LS-TXN-RESULT-CODE
+        MOVE "Account under garnishment - debits blocked"
+            TO LS-TXN-RESULT-MSG
+        GOBACK
+    END-IF
     *> Dormant accounts may receive credits (deposits, interest)
     *> but debits require reactivation to prevent unauthorized outflows.
     IF ACCT-STATUS = "D" AND TXN-DR-CR = "D"

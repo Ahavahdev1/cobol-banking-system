@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, COMP, RVRS, INQY functions (38 tests)
+*> Tests: SEND, RECV, COMP, RVRS, INQY functions (39 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -72,6 +72,7 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-036
     PERFORM TEST-WR-037
     PERFORM TEST-WR-038
+    PERFORM TEST-WR-039
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1725,4 +1726,45 @@ TEST-WR-038.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0099"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-039: SEND on garnished account -> E0045
+*> Court-ordered garnishment blocks all outgoing wires
+*> ---------------------------------------------------------------
+TEST-WR-039.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-039: SEND garnished acct -> E0045" TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "SEND" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000039" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "JOHN DOE" TO WIRE-ORIG-NAME OF WS-WIRE-RECORD
+    MOVE "JANE SMITH" TO WIRE-BENE-NAME OF WS-WIRE-RECORD
+    MOVE "US" TO WIRE-BENE-COUNTRY OF WS-WIRE-RECORD
+    MOVE "TELLER01" TO WIRE-CREATED-BY OF WS-WIRE-RECORD
+    MOVE 100000000039 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE "Y" TO ACCT-GARNISHMENT OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0045"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
+            " expected=E0045"
     END-IF.

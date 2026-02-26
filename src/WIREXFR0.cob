@@ -90,6 +90,12 @@ PROCESS-SEND.
         MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-GARNISHMENT = "Y"
+        MOVE "E0045" TO LS-WIRE-RESULT-CODE
+        MOVE "Account under garnishment - wires blocked"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-STATUS = "D"
         MOVE "E0013" TO LS-WIRE-RESULT-CODE
         MOVE "Account is dormant - wires not permitted"

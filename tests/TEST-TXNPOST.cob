@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (37 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (39 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -73,6 +73,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-040
     PERFORM TEST-TP-041
     PERFORM TEST-TP-042
+    PERFORM TEST-TP-043
+    PERFORM TEST-TP-044
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1407,6 +1409,60 @@ TEST-TP-042.
                 " low=" ACCT-MTD-LOW-BAL
                 " expected=700.00"
         END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-043: Garnishment blocks debit (withdrawal)
+*> Court-ordered garnishment freezes all outflows
+*> ---------------------------------------------------------------
+TEST-TP-043.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-043: Garnishment blocks debit -> E0045"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "Y" TO ACCT-GARNISHMENT
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 200.00 TO TXN-AMOUNT
+    MOVE 0 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0045"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0045"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-044: Garnishment allows credit (deposit)
+*> Credits are still permitted on garnished accounts
+*> ---------------------------------------------------------------
+TEST-TP-044.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-044: Garnishment allows credit -> E0000"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "Y" TO ACCT-GARNISHMENT
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 500.00 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
