@@ -174,6 +174,12 @@ PROCESS-PAYMENT.
             WS-NEXT-PMT-YYYY * 10000
             + WS-NEXT-PMT-MM * 100
             + WS-NEXT-PMT-DD
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Arithmetic overflow on next payment date"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-COMPUTE
     END-IF
     *> Decrement remaining term
     IF ACCT-REMAINING-TERM > 0

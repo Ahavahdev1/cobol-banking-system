@@ -95,14 +95,54 @@ DO-AGGR.
     MOVE SPACES TO LS-BSA-RESULT-MSG
     MOVE "N" TO LS-BSA-CTR-REQUIRED
 
+    *> GAP-02: Customer/date guard on CTR record
+    IF CTR-CUST-ID = 0
+        *> First aggregation - stamp customer ID and date
+        MOVE LS-BSA-CUST-ID TO CTR-CUST-ID
+        MOVE LS-BSA-TXN-DATE TO CTR-TXN-DATE
+    ELSE
+        *> Subsequent aggregation - validate customer/date match
+        IF CTR-CUST-ID NOT = LS-BSA-CUST-ID
+            OR CTR-TXN-DATE NOT = LS-BSA-TXN-DATE
+            MOVE "E0002" TO LS-BSA-RESULT-CODE
+            MOVE "Customer/date mismatch on CTR record"
+                TO LS-BSA-RESULT-MSG
+            GOBACK
+        END-IF
+    END-IF
+
     IF LS-BSA-IS-CASH = "Y"
         IF LS-BSA-CASH-DIRECTION = "I"
             ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-IN-TOTAL
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-BSA-RESULT-CODE
+                    MOVE "Arithmetic overflow on cash-in"
+                        TO LS-BSA-RESULT-MSG
+                    GOBACK
+            END-ADD
             ADD 1 TO CTR-CASH-IN-COUNT
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-BSA-RESULT-CODE
+                    MOVE "Arithmetic overflow on cash-in count"
+                        TO LS-BSA-RESULT-MSG
+                    GOBACK
+            END-ADD
         END-IF
         IF LS-BSA-CASH-DIRECTION = "O"
             ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-OUT-TOTAL
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-BSA-RESULT-CODE
+                    MOVE "Arithmetic overflow on cash-out"
+                        TO LS-BSA-RESULT-MSG
+                    GOBACK
+            END-ADD
             ADD 1 TO CTR-CASH-OUT-COUNT
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-BSA-RESULT-CODE
+                    MOVE "Arithmetic overflow on cash-out count"
+                        TO LS-BSA-RESULT-MSG
+                    GOBACK
+            END-ADD
         END-IF
     END-IF
 
@@ -140,12 +180,24 @@ DO-STRC.
     *> Combine cash-in and cash-out for structuring check
     COMPUTE WS-COMBINED-CASH =
         CTR-CASH-IN-TOTAL + CTR-CASH-OUT-TOTAL
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-BSA-RESULT-CODE
+            MOVE "Arithmetic overflow on combined cash"
+                TO LS-BSA-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     MOVE CTR-CASH-IN-TOTAL TO LS-BSA-CASH-IN-TOTAL
     MOVE CTR-CASH-OUT-TOTAL TO LS-BSA-CASH-OUT-TOTAL
 
     COMPUTE WS-TOTAL-TXN-COUNT =
         CTR-CASH-IN-COUNT + CTR-CASH-OUT-COUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-BSA-RESULT-CODE
+            MOVE "Arithmetic overflow on txn count"
+                TO LS-BSA-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     *> Check if total falls in structuring range ($8K-$9,999.99)
     *> and there are multiple transactions (count > 1)

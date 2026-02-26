@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-CIFMGMT.
 *> ================================================================
 *> TEST-CIFMGMT - Test suite for CIFMGMT CIF management
-*> Tests: VALD, INIT functions (14 tests)
+*> Tests: VALD, INIT functions (16 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -44,6 +44,8 @@ MAIN-PROGRAM.
     PERFORM TEST-CF-012
     PERFORM TEST-CF-013
     PERFORM TEST-CF-014
+    PERFORM TEST-CF-015
+    PERFORM TEST-CF-016
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -490,4 +492,68 @@ TEST-CF-014.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0024 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-015: VALD leap day DOB (20120229) under 18 -> E0029
+*> 18th birthday = 20300229, still in the future -> rejected
+*> ---------------------------------------------------------------
+TEST-CF-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-015: VALD leap DOB under 18=E0029" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000015 TO CIF-CUST-ID
+    MOVE "LEAPDAY" TO CIF-NAME-LAST
+    MOVE "YOUNG" TO CIF-NAME-FIRST
+    MOVE 112233445 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 20120229 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0029"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0029 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-016: VALD leap day DOB (20060229) over 18 -> E0000
+*> 18th birthday = 20240229, already past -> accepted
+*> ---------------------------------------------------------------
+TEST-CF-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-016: VALD leap DOB over 18=E0000" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000016 TO CIF-CUST-ID
+    MOVE "LEAPDAY" TO CIF-NAME-LAST
+    MOVE "ADULT" TO CIF-NAME-FIRST
+    MOVE 223344556 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 20060229 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0000 actual=" WS-CIF-RESULT-CODE
     END-IF.

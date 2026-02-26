@@ -42,6 +42,10 @@ MAIN-LOGIC.
         WHEN "NSF"
             PERFORM PROCESS-NSF-FEE THRU
                     PROCESS-NSF-FEE-EXIT
+        WHEN OTHER
+            MOVE "E0001" TO LS-FEE-RESULT-CODE
+            MOVE "Unsupported fee type" TO LS-FEE-RESULT-MSG
+            GOBACK
     END-EVALUATE
 
     GOBACK.
@@ -63,7 +67,11 @@ PROCESS-MONTHLY-FEE.
         MOVE "EM" TO LS-FEE-WAIVER-REASON
         MOVE 0 TO LS-FEE-ASSESSED
         ADD FEE-AMOUNT TO ACCT-YTD-FEES-WAIVED
-            ON SIZE ERROR CONTINUE
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-FEE-RESULT-CODE
+                MOVE "YTD fee accumulator overflow"
+                    TO LS-FEE-RESULT-MSG
+                GOBACK
         END-ADD
         MOVE "Fee waived - employee" TO LS-FEE-RESULT-MSG
         GO TO PROCESS-MONTHLY-FEE-EXIT
@@ -77,7 +85,11 @@ PROCESS-MONTHLY-FEE.
         MOVE "DD" TO LS-FEE-WAIVER-REASON
         MOVE 0 TO LS-FEE-ASSESSED
         ADD FEE-AMOUNT TO ACCT-YTD-FEES-WAIVED
-            ON SIZE ERROR CONTINUE
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-FEE-RESULT-CODE
+                MOVE "YTD fee accumulator overflow"
+                    TO LS-FEE-RESULT-MSG
+                GOBACK
         END-ADD
         MOVE "Fee waived - direct deposit" TO LS-FEE-RESULT-MSG
         GO TO PROCESS-MONTHLY-FEE-EXIT
@@ -91,7 +103,11 @@ PROCESS-MONTHLY-FEE.
         MOVE "MB" TO LS-FEE-WAIVER-REASON
         MOVE 0 TO LS-FEE-ASSESSED
         ADD FEE-AMOUNT TO ACCT-YTD-FEES-WAIVED
-            ON SIZE ERROR CONTINUE
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-FEE-RESULT-CODE
+                MOVE "YTD fee accumulator overflow"
+                    TO LS-FEE-RESULT-MSG
+                GOBACK
         END-ADD
         MOVE "Fee waived - minimum balance" TO LS-FEE-RESULT-MSG
         GO TO PROCESS-MONTHLY-FEE-EXIT
@@ -101,7 +117,11 @@ PROCESS-MONTHLY-FEE.
     MOVE FEE-AMOUNT TO LS-FEE-ASSESSED
     MOVE "N" TO LS-FEE-WAIVED-FLAG
     ADD FEE-AMOUNT TO ACCT-YTD-FEES-CHARGED
-        ON SIZE ERROR CONTINUE
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-FEE-RESULT-CODE
+            MOVE "YTD fee accumulator overflow"
+                TO LS-FEE-RESULT-MSG
+            GOBACK
     END-ADD
     MOVE "Monthly fee assessed" TO LS-FEE-RESULT-MSG.
 

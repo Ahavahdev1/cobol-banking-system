@@ -303,13 +303,13 @@ TEST-OV-005.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> OV-006: Fee YTD overflow is non-fatal (CONTINUE on SIZE ERROR)
+*> OV-006: Fee YTD overflow is now fatal (ON SIZE ERROR -> E0040)
 *> ACCT-YTD-FEES-CHARGED at max S9(9)V99 = 999999999.99
-*> Fee of $12.00 causes YTD overflow but fee still assessed
+*> Fee of $12.00 causes YTD overflow -> E0040
 *> ---------------------------------------------------------------
 TEST-OV-006.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "OV-006: Fee YTD overflow non-fatal -> E0000"
+    MOVE "OV-006: Fee YTD overflow -> E0040"
         TO WS-TEST-NAME
     INITIALIZE ACCT-RECORD
     INITIALIZE FEE-SCHEDULE-RECORD
@@ -332,17 +332,11 @@ TEST-OV-006.
     MOVE "A" TO FEE-STATUS
     CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
                           WS-FEE-RESULT
-    IF WS-FEE-RESULT-CODE = "E0000"
-        IF WS-FEE-ASSESSED = 12.00
-            ADD 1 TO WS-PASS-COUNT
-            DISPLAY "  PASS: " WS-TEST-NAME
-        ELSE
-            ADD 1 TO WS-FAIL-COUNT
-            DISPLAY "  FAIL: " WS-TEST-NAME
-                " expected fee=12.00 actual=" WS-FEE-ASSESSED
-        END-IF
+    IF WS-FEE-RESULT-CODE = "E0040"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0000 actual=" WS-FEE-RESULT-CODE
+            " expected=E0040 actual=" WS-FEE-RESULT-CODE
     END-IF.

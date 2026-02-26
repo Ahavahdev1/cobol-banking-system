@@ -183,6 +183,17 @@ CHECK-ACCOUNT.
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R02" TO LS-ACH-RETURN-CODE
         MOVE "ACCOUNT CLOSED" TO LS-ACH-RETURN-REASON
+    *> Check for frozen account
+    ELSE IF ACCT-STATUS = "F"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R16" TO LS-ACH-RETURN-CODE
+        MOVE "ACCOUNT FROZEN" TO LS-ACH-RETURN-REASON
+    *> Check for legal hold on debits (credits still allowed)
+    ELSE IF ACCT-LEGAL-HOLD = "Y"
+        AND WS-IS-DEBIT = "Y"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R16" TO LS-ACH-RETURN-CODE
+        MOVE "ACCOUNT UNDER LEGAL HOLD" TO LS-ACH-RETURN-REASON
     *> Check for authorization revoked (debits to restricted acct)
     ELSE IF ACCT-STATUS = "R"
         AND WS-IS-DEBIT = "Y"
@@ -195,6 +206,8 @@ CHECK-ACCOUNT.
         MOVE "Y" TO LS-ACH-RETURN-FLAG
         MOVE "R08" TO LS-ACH-RETURN-CODE
         MOVE "STOP PAYMENT ON ITEM" TO LS-ACH-RETURN-REASON
+    END-IF
+    END-IF
     END-IF
     END-IF
     END-IF

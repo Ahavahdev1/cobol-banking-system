@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
 *> Tests: ACH credits, debits, returns, batch validation,
-*>        edge cases, overflow, OFAC screening (24 tests)
+*>        edge cases, overflow, OFAC screening (26 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -73,6 +73,8 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-022
     PERFORM TEST-AR-023
     PERFORM TEST-AR-024
+    PERFORM TEST-AR-025
+    PERFORM TEST-AR-026
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1362,6 +1364,118 @@ TEST-AR-024.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " return-code=" WS-ACH-RETURN-CODE
                 " expected=R08"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-025: ACH debit to frozen account -> return R16
+*> ---------------------------------------------------------------
+TEST-AR-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-025: ACH debit to frozen account -> R16"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH debit to frozen account
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000025" TO WS-ACH-ACCT-NUMBER
+    MOVE 500.00 TO WS-ACH-AMOUNT
+    MOVE "FROZEN ACCT DEBIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000025" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 500.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Frozen account (status=F)
+    MOVE 100000000025 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "F" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RETURN-FLAG = "Y"
+        IF WS-ACH-RETURN-CODE = "R16"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " return-code=" WS-ACH-RETURN-CODE
+                " expected=R16"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-026: ACH debit to account under legal hold -> return R16
+*> Legal hold blocks debits but allows credits
+*> ---------------------------------------------------------------
+TEST-AR-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-026: ACH debit legal hold -> R16"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH debit to account with legal hold
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000026" TO WS-ACH-ACCT-NUMBER
+    MOVE 300.00 TO WS-ACH-AMOUNT
+    MOVE "LEGAL HOLD DEBIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000026" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 300.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Active account with legal hold
+    MOVE 100000000026 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 8000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 8000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE "Y" TO ACCT-LEGAL-HOLD OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RETURN-FLAG = "Y"
+        IF WS-ACH-RETURN-CODE = "R16"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " return-code=" WS-ACH-RETURN-CODE
+                " expected=R16"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

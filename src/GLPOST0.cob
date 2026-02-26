@@ -93,10 +93,18 @@ POST-GL-ENTRY.
                     EXIT PARAGRAPH
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on MTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on YTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
         WHEN "C"
             *> Credit-normal account (Liability, Income, Equity)
@@ -110,10 +118,18 @@ POST-GL-ENTRY.
                         EXIT PARAGRAPH
                 END-SUBTRACT
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
-                    ON SIZE ERROR CONTINUE
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on MTD accumulator"
+                            TO LS-GL-RESULT-MSG
+                        GOBACK
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
-                    ON SIZE ERROR CONTINUE
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on YTD accumulator"
+                            TO LS-GL-RESULT-MSG
+                        GOBACK
                 END-ADD
             ELSE
                 *> Normal entry: credit-normal on CR side
@@ -125,25 +141,49 @@ POST-GL-ENTRY.
                         EXIT PARAGRAPH
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
-                    ON SIZE ERROR CONTINUE
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on MTD accumulator"
+                            TO LS-GL-RESULT-MSG
+                        GOBACK
                 END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
-                    ON SIZE ERROR CONTINUE
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on YTD accumulator"
+                            TO LS-GL-RESULT-MSG
+                        GOBACK
                 END-ADD
             END-IF
         WHEN OTHER
             *> Journal mode: track double-entry totals
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on MTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on MTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on YTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
-                ON SIZE ERROR CONTINUE
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on YTD accumulator"
+                        TO LS-GL-RESULT-MSG
+                    GOBACK
             END-ADD
     END-EVALUATE
 

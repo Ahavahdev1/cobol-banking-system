@@ -3,8 +3,8 @@ PROGRAM-ID. TEST-BSAAML.
 *> ================================================================
 *> TEST-BSAAML - Test suite for BSACTRO BSA/AML CTR Generator
 *> Tests: CTR threshold, aggregation, exemptions, cash direction,
-*> structuring boundary detection
-*> 12 tests (BA-001 to BA-012)
+*> structuring boundary detection, cross-account aggregation
+*> 13 tests (BA-001 to BA-013)
 *> ================================================================
 
 DATA DIVISION.
@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BA-010
     PERFORM TEST-BA-011
     PERFORM TEST-BA-012
+    PERFORM TEST-BA-013
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -504,4 +505,62 @@ TEST-BA-012.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-BSA-RESULT-CODE " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-013: AGGR - cross-account aggregation: same customer, two
+*> different accounts, $6K + $5K = $11K -> CTR required
+*> Proves per-customer (not per-account) aggregation
+*> ---------------------------------------------------------------
+TEST-BA-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-013: Cross-acct aggr $6K+$5K -> CTR req"
+        TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    *> First: $6,000 cash-in from account 100000000001
+    MOVE "AGGR" TO WS-FUNCTION
+    MOVE 1234567890 TO WS-BSA-CUST-ID
+    MOVE 20260226 TO WS-BSA-TXN-DATE
+    MOVE 6000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "I" TO WS-BSA-CASH-DIRECTION
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 100000000001 TO WS-BSA-ACCT-NUMBER
+    MOVE "N" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    *> Second: $5,000 cash-in from DIFFERENT account 100000000002
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "AGGR" TO WS-FUNCTION
+    MOVE 1234567890 TO WS-BSA-CUST-ID
+    MOVE 20260226 TO WS-BSA-TXN-DATE
+    MOVE 5000.00 TO WS-BSA-CASH-AMOUNT
+    MOVE "I" TO WS-BSA-CASH-DIRECTION
+    MOVE "Y" TO WS-BSA-IS-CASH
+    MOVE 100000000002 TO WS-BSA-ACCT-NUMBER
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0000"
+        IF WS-BSA-CTR-REQUIRED = "Y"
+            IF WS-BSA-CASH-IN-TOTAL = 11000.00
+                ADD 1 TO WS-PASS-COUNT
+                DISPLAY "  PASS: " WS-TEST-NAME
+            ELSE
+                ADD 1 TO WS-FAIL-COUNT
+                DISPLAY "  FAIL: " WS-TEST-NAME
+                    " in-total=" WS-BSA-CASH-IN-TOTAL
+                    " expected=11000.00"
+            END-IF
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " CTR=" WS-BSA-CTR-REQUIRED " expected=Y"
+                " in-total=" WS-BSA-CASH-IN-TOTAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE
     END-IF.

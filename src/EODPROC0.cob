@@ -253,20 +253,29 @@ EOD-LOG-AUDIT.
 
 *> ---------------------------------------------------------------
 *> Release matured holds on account
-*> Simplified: if ACCT-HOLD-AMOUNT > 0, release all holds and
-*> recalculate available balance. A production system would iterate
-*> individual HOLD-RECORDs and compare HOLD-RELEASE-DATE to batch
-*> date for each active hold.
+*> LIMITATION: ACCT-RECORD carries only a summary ACCT-HOLD-AMOUNT
+*> with no per-account hold release date. A production system must
+*> iterate individual HOLD-RECORDs (CPYHOLD) and compare each
+*> HOLD-RELEASE-DATE to the batch date before releasing.
+*> This simplified version uses the HOLD-RELEASE-DATE from the
+*> last HOLDCALC0 result in WS-HOLD-RELEASE-DT as a proxy.
 *> ---------------------------------------------------------------
 EOD-RELEASE-HOLDS.
     IF ACCT-HOLD-AMOUNT > 0
-        SUBTRACT ACCT-HOLD-AMOUNT FROM ACCT-HOLD-AMOUNT
-        COMPUTE ACCT-AVAIL-BAL =
-            ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
-            ON SIZE ERROR
-                ADD 1 TO WS-ACCTS-ERRORS
-        END-COMPUTE
-        ADD 1 TO WS-HOLDS-RELEASED
+        *> Only release if hold has matured (release date <= batch date)
+        IF WS-HOLD-RELEASE-DT > 0
+            AND WS-HOLD-RELEASE-DT > LS-BATCH-DATE
+            *> Hold has not yet matured; skip release
+            CONTINUE
+        ELSE
+            SUBTRACT ACCT-HOLD-AMOUNT FROM ACCT-HOLD-AMOUNT
+            COMPUTE ACCT-AVAIL-BAL =
+                ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+                ON SIZE ERROR
+                    ADD 1 TO WS-ACCTS-ERRORS
+            END-COMPUTE
+            ADD 1 TO WS-HOLDS-RELEASED
+        END-IF
     END-IF
     *> Reset daily NSF counter for next business day
     MOVE 0 TO ACCT-NSF-COUNT-TODAY.

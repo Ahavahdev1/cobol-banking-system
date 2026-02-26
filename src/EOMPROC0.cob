@@ -45,6 +45,9 @@ COPY CPYAUDT.
     05  WS-STMT-YYYY            PIC 9(4).
     05  WS-STMT-MM              PIC 9(2).
     05  WS-STMT-DD              PIC 9(2).
+01  WS-LEAP-REM4               PIC 9(4).
+01  WS-LEAP-REM100             PIC 9(4).
+01  WS-LEAP-REM400             PIC 9(4).
 
 *> Batch counters
 01  WS-ACCTS-PROCESSED       PIC 9(8) VALUE 0.
@@ -211,5 +214,34 @@ EOM-UPDATE-STMT-DATES.
     IF WS-STMT-MM > 12
         MOVE 1 TO WS-STMT-MM
         ADD 1 TO WS-STMT-YYYY
+    END-IF
+    *> Cap day for shorter months to avoid invalid dates
+    IF WS-STMT-DD > 28
+        EVALUATE WS-STMT-MM
+            WHEN 2
+                DIVIDE WS-STMT-YYYY BY 4
+                    GIVING WS-LEAP-REM4
+                    REMAINDER WS-LEAP-REM4
+                DIVIDE WS-STMT-YYYY BY 100
+                    GIVING WS-LEAP-REM100
+                    REMAINDER WS-LEAP-REM100
+                DIVIDE WS-STMT-YYYY BY 400
+                    GIVING WS-LEAP-REM400
+                    REMAINDER WS-LEAP-REM400
+                IF WS-LEAP-REM4 = 0
+                    AND (WS-LEAP-REM100 NOT = 0
+                         OR WS-LEAP-REM400 = 0)
+                    MOVE 29 TO WS-STMT-DD
+                ELSE
+                    MOVE 28 TO WS-STMT-DD
+                END-IF
+            WHEN 4
+            WHEN 6
+            WHEN 9
+            WHEN 11
+                IF WS-STMT-DD > 30
+                    MOVE 30 TO WS-STMT-DD
+                END-IF
+        END-EVALUATE
     END-IF
     MOVE WS-NEXT-STMT-DATE TO ACCT-NEXT-STMT-DATE.

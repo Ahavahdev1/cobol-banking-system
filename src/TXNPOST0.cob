@@ -232,9 +232,9 @@ MAP-GL-ENTRIES.
                 MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
             END-IF
         WHEN OTHER
-            *> Unknown type: use deposit GL for both sides (suspense)
-            MOVE WS-DEPOSIT-GL TO LS-GL-DR-ACCOUNT
-            MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
+            *> Unknown type: route to suspense for manual review
+            MOVE 0000009999 TO LS-GL-DR-ACCOUNT
+            MOVE 0000009999 TO LS-GL-CR-ACCOUNT
     END-EVALUATE
     MOVE TXN-AMOUNT TO LS-GL-AMOUNT
     MOVE "Y" TO LS-GL-POST-FLAG.

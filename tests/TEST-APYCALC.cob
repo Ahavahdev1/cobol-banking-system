@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-APYCALC.
 *> ================================================================
 *> TEST-APYCALC - Test suite for APYCALC0 APY/APR Calculator
 *> Tests: APY compounding frequencies, edge cases, loan APR
-*> 8 tests (AY-001 to AY-008)
+*> 9 tests (AY-001 to AY-009)
 *> Regulation DD (Truth in Savings) - 12 CFR 1030
 *> ================================================================
 
@@ -44,6 +44,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AY-006
     PERFORM TEST-AY-007
     PERFORM TEST-AY-008
+    PERFORM TEST-AY-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -315,6 +316,40 @@ TEST-AY-008.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " APY=" WS-APY-VALUE
                 " expected 0.50-0.51"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-APY-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AY-009: Loan APR - 6.5% monthly -> APR = 6.50 (nominal)
+*>         For loan accounts, APR currently returns the nominal rate
+*>         (TILA Reg Z fee-inclusive APR not yet implemented)
+*> ---------------------------------------------------------------
+TEST-AY-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AY-009: Loan 6.5% monthly -> APR = 6.50"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-APY-RESULT
+    MOVE 6.5000000 TO ACCT-INT-RATE
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "M" TO ACCT-INT-PAY-FREQ
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    CALL "APYCALC0" USING ACCT-RECORD WS-APY-RESULT
+    IF WS-APY-RESULT-CODE = "E0000"
+        IF WS-APR-VALUE = 6.5000000
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " APR=" WS-APR-VALUE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " APR=" WS-APR-VALUE
+                " expected=006.5000000"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

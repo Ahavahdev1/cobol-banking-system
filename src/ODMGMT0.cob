@@ -59,6 +59,12 @@ ODMGMT0-MAIN.
     *> Step 2: Calculate potential overdraft
     COMPUTE WS-OD-AMOUNT =
         LS-OD-TXN-AMOUNT - WS-EFFECTIVE-BAL
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-OD-RESULT-CODE
+            MOVE "Arithmetic overflow on OD amount"
+                TO LS-OD-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     *> Step 3: Check OD limit
     IF WS-OD-AMOUNT > ACCT-OD-LIMIT
@@ -73,6 +79,12 @@ ODMGMT0-MAIN.
     IF ACCT-OD-PROTECTION = "T"
         COMPUTE WS-SHORTFALL =
             LS-OD-TXN-AMOUNT - WS-EFFECTIVE-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-OD-RESULT-CODE
+                MOVE "Arithmetic overflow on OD shortfall"
+                    TO LS-OD-RESULT-MSG
+                GOBACK
+        END-COMPUTE
         IF WS-SHORTFALL > ZEROS
             MOVE WS-SHORTFALL TO LS-OD-TRANSFER-AMT
         END-IF

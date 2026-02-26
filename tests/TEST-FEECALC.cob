@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-FEECALC.
 *> ================================================================
 *> TEST-FEECALC - Test suite for FEECALC0 Fee Assessment Engine
 *> Tests: Monthly fees, waivers, NSF fees, de minimis, YTD tracking
-*> 15 tests (FE-001 to FE-015)
+*> 16 tests (FE-001 to FE-016)
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +49,7 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-013
     PERFORM TEST-FE-014
     PERFORM TEST-FE-015
+    PERFORM TEST-FE-016
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -671,4 +672,33 @@ TEST-FE-015.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-016: Unsupported fee type ("XYZ") -> E0001
+*> ---------------------------------------------------------------
+TEST-FE-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-016: Unsupported fee type XYZ -> E0001"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "XYZ" TO FEE-TYPE
+    MOVE 10.00 TO FEE-AMOUNT
+    MOVE "N" TO FEE-WAIVER-ELIGIBLE
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0001 actual=" WS-FEE-RESULT-CODE
     END-IF.

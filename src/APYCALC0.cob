@@ -19,7 +19,7 @@ PROGRAM-ID. APYCALC0.
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 01  WS-PERIOD-RATE            PIC V9(18).
-01  WS-COMPOUND-FACTOR        PIC 9(5)V9(12).
+01  WS-COMPOUND-FACTOR        PIC 9(5)V9(15).
 01  WS-PERIODS                PIC 9(3).
 01  WS-LOOP-IDX               PIC 9(3).
 01  WS-COMPUTED-APY            PIC 9(3)V9(7).
@@ -117,6 +117,9 @@ MAIN-LOGIC.
 
     *> For deposit accounts, APY is the primary disclosure
     *> For loan accounts, APR = nominal rate, effective = APY
+    *> NOTE: TILA Reg Z APR requires fee-inclusive calculation.
+    *> This module returns nominal rate only. A separate TILA
+    *> disclosure module is needed for fee-inclusive APR.
     IF ACCT-TYPE = "L"
         MOVE ACCT-INT-RATE TO LS-APR-VALUE
     END-IF
