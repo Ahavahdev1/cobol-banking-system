@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (18 tests)
+*>        batch status, multi-account, error paths (19 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -50,6 +50,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-016
     PERFORM TEST-BE-017
     PERFORM TEST-BE-018
+    PERFORM TEST-BE-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -319,11 +320,12 @@ TEST-BE-009.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> BE-010: Frozen account (status F) is skipped
+*> BE-010: Frozen account still accrues interest via EOD
+*> Freeze blocks transactions, not interest entitlement.
 *> ---------------------------------------------------------------
 TEST-BE-010.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "BE-010: Frozen acct skipped" TO WS-TEST-NAME
+    MOVE "BE-010: Frozen acct processed" TO WS-TEST-NAME
     PERFORM SETUP-INTEREST-ACCOUNT
     MOVE "F" TO ACCT-STATUS
     INITIALIZE BATCH-RECORD
@@ -333,14 +335,14 @@ TEST-BE-010.
                           ACCT-RECORD
                           BATCH-RECORD
                           WS-BATCH-RESULT
-    IF BATCH-ACCTS-PROCESSED = 0
+    IF BATCH-ACCTS-PROCESSED = 1
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " processed=" BATCH-ACCTS-PROCESSED
-            " expected=0"
+            " expected=1"
     END-IF.
 
 *> ---------------------------------------------------------------
@@ -662,4 +664,36 @@ TEST-BE-018.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " next-pay=" ACCT-INT-NEXT-PAY-DATE
             " expected=20260601 (unchanged)"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-019: Frozen account still accrues daily interest via EOD
+*> Freeze blocks transactions, not interest entitlement.
+*> ---------------------------------------------------------------
+TEST-BE-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-019: Frozen acct accrues interest"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "F" TO ACCT-STATUS
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 0 TO ACCT-ACCRUED-INT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> Accrued interest should be > 0 (daily interest accrued)
+    IF ACCT-ACCRUED-INT > 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+            " accrued=" ACCT-ACCRUED-INT
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " accrued=" ACCT-ACCRUED-INT
+            " expected>0"
     END-IF.

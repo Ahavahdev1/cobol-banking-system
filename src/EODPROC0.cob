@@ -143,7 +143,12 @@ MAIN-LOGIC.
     MOVE "S" TO BATCH-STATUS
 
     *> Process provided account
+    *> Active, Dormant, and Frozen accounts all need EOD processing.
+    *> Frozen accounts still accrue interest (freeze blocks transactions,
+    *> not interest entitlement). Interest payment posting may fail for
+    *> frozen accounts, which is handled by the rollback logic.
     IF ACCT-STATUS = "A" OR ACCT-STATUS = "D"
+        OR ACCT-STATUS = "F"
         PERFORM PROCESS-ACCOUNT
     END-IF
 
