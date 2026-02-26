@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
 *> Tests: ACH credits, debits, returns, batch validation,
-*>        edge cases, overflow, OFAC screening (32 tests)
+*>        edge cases, overflow, OFAC screening (35 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -82,6 +82,8 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-031
     PERFORM TEST-AR-032
     PERFORM TEST-AR-033
+    PERFORM TEST-AR-034
+    PERFORM TEST-AR-035
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1859,4 +1861,94 @@ TEST-AR-033.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " return-flag=" WS-ACH-RETURN-FLAG
             " expected=Y"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-034: Multi-entry batch credit exceeds batch CR total -> E0094
+*> Batch has 5 entries, CR total = $500, this entry is $600
+*> ---------------------------------------------------------------
+TEST-AR-034.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-034: Multi-batch CR exceeds total -> E0094"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 22 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000034" TO WS-ACH-ACCT-NUMBER
+    MOVE 600.00 TO WS-ACH-AMOUNT
+    MOVE "BATCH EXCEED CR" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000034" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 5 TO WS-ACH-BATCH-COUNT
+    MOVE 0 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 500.00 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    MOVE 100000000034 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0094"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-ACH-RESULT-CODE " expected=E0094"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-035: Multi-entry batch debit within limit -> E0000
+*> Batch has 3 entries, DR total = $1000, this entry is $300
+*> ---------------------------------------------------------------
+TEST-AR-035.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-035: Multi-batch DR within total -> E0000"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000035" TO WS-ACH-ACCT-NUMBER
+    MOVE 300.00 TO WS-ACH-AMOUNT
+    MOVE "BATCH WITHIN DR" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000035" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 3 TO WS-ACH-BATCH-COUNT
+    MOVE 1000.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    MOVE 100000000035 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    MOVE "N" TO ACCT-GARNISHMENT OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-ACH-RESULT-CODE " expected=E0000"
     END-IF.

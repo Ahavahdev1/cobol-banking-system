@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (22 tests)
+*> Tests: File, provisional credit, resolve, inquiry (24 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -50,6 +50,8 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-020
     PERFORM TEST-DP-021
     PERFORM TEST-DP-022
+    PERFORM TEST-DP-023
+    PERFORM TEST-DP-024
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -901,3 +903,76 @@ TEST-DP-022.
     END-IF.
 TEST-DP-022-END.
     CONTINUE.
+
+*> ---------------------------------------------------------------
+*> DP-023: RSLV past Reg E deadline without PROV -> E0100
+*> Dispute filed with deadline in the past, status still "P"
+*> (no provisional credit issued) -> must issue PROV first
+*> ---------------------------------------------------------------
+TEST-DP-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-023: RSLV past deadline no PROV -> E0100"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    *> Set up dispute in "P" status with a past deadline
+    MOVE 1 TO DSP-DISPUTE-ID
+    MOVE "P" TO DSP-STATUS
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 250.00 TO DSP-TXN-AMOUNT
+    MOVE 20260101 TO DSP-DISPUTE-DATE
+    MOVE 20260115 TO DSP-DEADLINE-DATE
+    *> Today is past the deadline
+    MOVE "AP" TO DSP-RESOLUTION-CODE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0100"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0100"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-024: RSLV past deadline WITH PROV (status=C) -> allowed
+*> Dispute credited (status="C") can be resolved even past deadline
+*> ---------------------------------------------------------------
+TEST-DP-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-024: RSLV past deadline w/ PROV -> ok"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    *> Set up dispute in "C" status (provisional credit issued)
+    MOVE 2 TO DSP-DISPUTE-ID
+    MOVE "C" TO DSP-STATUS
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 250.00 TO DSP-TXN-AMOUNT
+    MOVE 250.00 TO DSP-PROVISIONAL-AMT
+    MOVE 20260101 TO DSP-DISPUTE-DATE
+    MOVE 20260115 TO DSP-DEADLINE-DATE
+    MOVE "AP" TO DSP-RESOLUTION-CODE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0000"
+    END-IF.

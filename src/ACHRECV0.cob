@@ -150,6 +150,7 @@ MAIN-PROCESS.
 *> CHECK-BATCH-TOTALS - Validate batch control totals
 *> ---------------------------------------------------------------
 CHECK-BATCH-TOTALS.
+    *> Single-entry batch: entry amount must equal batch total
     IF LS-ACH-BATCH-COUNT = 1
         IF WS-IS-CREDIT = "Y"
             IF LS-ACH-AMOUNT NOT = LS-ACH-BATCH-CR-TOTAL
@@ -162,6 +163,25 @@ CHECK-BATCH-TOTALS.
             IF LS-ACH-AMOUNT NOT = LS-ACH-BATCH-DR-TOTAL
                 MOVE "E0094" TO LS-ACH-RESULT-CODE
                 MOVE "BATCH CONTROL TOTAL MISMATCH"
+                    TO LS-ACH-RESULT-MSG
+            END-IF
+        END-IF
+    END-IF
+    *> Multi-entry batch: no single entry can exceed its batch total
+    IF LS-ACH-BATCH-COUNT > 1
+        IF WS-IS-CREDIT = "Y"
+            AND LS-ACH-BATCH-CR-TOTAL > 0
+            IF LS-ACH-AMOUNT > LS-ACH-BATCH-CR-TOTAL
+                MOVE "E0094" TO LS-ACH-RESULT-CODE
+                MOVE "ENTRY EXCEEDS BATCH CREDIT TOTAL"
+                    TO LS-ACH-RESULT-MSG
+            END-IF
+        END-IF
+        IF WS-IS-DEBIT = "Y"
+            AND LS-ACH-BATCH-DR-TOTAL > 0
+            IF LS-ACH-AMOUNT > LS-ACH-BATCH-DR-TOTAL
+                MOVE "E0094" TO LS-ACH-RESULT-CODE
+                MOVE "ENTRY EXCEEDS BATCH DEBIT TOTAL"
                     TO LS-ACH-RESULT-MSG
             END-IF
         END-IF
