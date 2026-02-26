@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (29 tests)
+*> Tests: Payments, late checks, payoff, edge cases (30 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -59,6 +59,7 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-035
     PERFORM TEST-LP-036
     PERFORM TEST-LP-037
+    PERFORM TEST-LP-038
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1019,6 +1020,47 @@ TEST-LP-037.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " payoff=" WS-LOAN-NEW-BALANCE
                 " expected=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-038: Interest rounding (not truncation) on payment split
+*>         accrued=100.005678 -> should round to 100.01, not truncate
+*>         to 100.00. Payment $200, int-portion=100.01, prin=99.99
+*> ---------------------------------------------------------------
+TEST-LP-038.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-038: Interest rounds (not truncates) on split"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    *> Accrued interest with fractional cents: 100.005678
+    *> Should round to 100.01 (not truncate to 100.00)
+    MOVE 100.005678 TO ACCT-ACCRUED-INT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 200.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF WS-LOAN-INT-PORTION = 100.01
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " int=" WS-LOAN-INT-PORTION
+                " prin=" WS-LOAN-PRIN-PORTION
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " int=" WS-LOAN-INT-PORTION
+                " expected=100.01"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

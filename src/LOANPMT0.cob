@@ -90,8 +90,9 @@ PROCESS-PAYMENT.
         MOVE "Loan is paid off" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
-    *> Truncate accrued interest to 2 decimal places for splitting
-    MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
+    *> Round accrued interest to 2 decimal places for splitting
+    COMPUTE WS-ACCRUED-INT-2DP ROUNDED = ACCT-ACCRUED-INT
+    END-COMPUTE
     *> Split payment into interest and principal
     IF LS-PAYMENT-AMT <= WS-ACCRUED-INT-2DP
         *> Entire payment goes to interest
@@ -297,7 +298,8 @@ CALC-PAYOFF.
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
-    MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
+    COMPUTE WS-ACCRUED-INT-2DP ROUNDED = ACCT-ACCRUED-INT
+    END-COMPUTE
     *> Payoff = principal + accrued interest + past-due amounts
     *> - escrow surplus (escrow balance returned to borrower)
     COMPUTE WS-PAYOFF-AMT =
