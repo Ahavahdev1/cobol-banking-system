@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (26 tests)
+*> Tests: File, provisional credit, resolve, inquiry (27 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -54,6 +54,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-024
     PERFORM TEST-DP-025
     PERFORM TEST-DP-026
+    PERFORM TEST-DP-027
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1070,4 +1071,43 @@ TEST-DP-026.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-027: PROV on deceased account -> E0036
+*> Provisional credit bypasses TXNPOST0 — must have own deceased
+*> check to prevent balance modification on deceased accounts
+*> ---------------------------------------------------------------
+TEST-DP-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-027: PROV deceased acct -> E0036"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000004 TO DSP-ACCT-NUMBER
+    MOVE 000000000000300 TO DSP-TXN-ID
+    MOVE 500.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000004 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "Y" TO ACCT-DECEASED
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> File should succeed (dispute can be filed on any account)
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0036"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0036"
     END-IF.

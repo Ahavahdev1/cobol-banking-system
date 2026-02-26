@@ -172,6 +172,12 @@ DO-PROVISIONAL-CREDIT.
             TO LS-DSP-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-DSP-RESULT-CODE
+        MOVE "Account holder deceased - cannot issue credit"
+            TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Set provisional amount and date
     MOVE DSP-TXN-AMOUNT TO DSP-PROVISIONAL-AMT

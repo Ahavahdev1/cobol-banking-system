@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (30 tests)
+*> Tests: Payments, late checks, payoff, edge cases (33 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -60,6 +60,9 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-036
     PERFORM TEST-LP-037
     PERFORM TEST-LP-038
+    PERFORM TEST-LP-039
+    PERFORM TEST-LP-040
+    PERFORM TEST-LP-041
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1066,4 +1069,94 @@ TEST-LP-038.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-039: PMNT deceased loan -> E0036
+*> Consistent with TXNPOST0/WIREXFR0/ACHRECV0 deceased blocking
+*> ---------------------------------------------------------------
+TEST-LP-039.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-039: PMNT deceased loan=E0036"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "Y" TO ACCT-DECEASED
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 50.00 TO ACCT-ACCRUED-INT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0036"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE " expected=E0036"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-040: LATE deceased loan -> E0036
+*> Late fee assessment blocked for deceased borrowers
+*> ---------------------------------------------------------------
+TEST-LP-040.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-040: LATE deceased loan=E0036"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "Y" TO ACCT-DECEASED
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 20260101 TO ACCT-NEXT-PMT-DATE
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "LATE" TO WS-LOAN-FUNCTION
+    MOVE 0 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0036"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE " expected=E0036"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-041: POFF deceased loan -> E0036
+*> Payoff blocked for deceased borrowers
+*> ---------------------------------------------------------------
+TEST-LP-041.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-041: POFF deceased loan=E0036"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE "L" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "Y" TO ACCT-DECEASED
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 50.00 TO ACCT-ACCRUED-INT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "POFF" TO WS-LOAN-FUNCTION
+    MOVE 0 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0036"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE " expected=E0036"
     END-IF.

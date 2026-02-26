@@ -78,6 +78,11 @@ PROCESS-PAYMENT.
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-LOAN-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     *> Validate payment amount > 0
     IF LS-PAYMENT-AMT <= ZERO
         MOVE "E0002" TO LS-LOAN-RESULT-CODE
@@ -234,6 +239,11 @@ CHECK-LATE.
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-LOAN-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-NEXT-PMT-DATE > 0
         AND LS-PAYMENT-DATE > ACCT-NEXT-PMT-DATE
         *> Payment is past due - compute actual days late
@@ -296,6 +306,11 @@ CALC-PAYOFF.
     IF ACCT-STATUS = "E"
         MOVE "E0044" TO LS-LOAN-RESULT-CODE
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-LOAN-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
     COMPUTE WS-ACCRUED-INT-2DP ROUNDED = ACCT-ACCRUED-INT

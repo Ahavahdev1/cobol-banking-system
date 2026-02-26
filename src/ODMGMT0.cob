@@ -69,6 +69,12 @@ ODMGMT0-MAIN.
         MOVE "Account holder is deceased" TO LS-OD-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-LEGAL-HOLD = "Y"
+        MOVE "E0014" TO LS-OD-RESULT-CODE
+        MOVE "Account under legal hold - OD blocked"
+            TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-GARNISHMENT = "Y"
         MOVE "E0045" TO LS-OD-RESULT-CODE
         MOVE "Account under garnishment - OD blocked"

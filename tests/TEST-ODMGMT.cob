@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ODMGMT.
 *> ================================================================
 *> TEST-ODMGMT - Test suite for ODMGMT0 Overdraft Management
 *> Tests: Reg E opt-in, OD limits, protection transfers, NSF caps,
-*>        de minimis, acct type/status (21 tests OD-001 to OD-021)
+*>        de minimis, acct type/status (22 tests OD-001 to OD-022)
 *> ================================================================
 
 DATA DIVISION.
@@ -57,6 +57,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-019
     PERFORM TEST-OD-020
     PERFORM TEST-OD-021
+    PERFORM TEST-OD-022
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -893,4 +894,40 @@ TEST-OD-021.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE
             " expected=E0045"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-022: Legal hold -> E0014
+*> OD extends credit (debit), legal hold blocks all debits
+*> Prevents phantom NSF counter inflation on held accounts
+*> ---------------------------------------------------------------
+TEST-OD-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-022: Legal hold -> E0014" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE "Y" TO ACCT-LEGAL-HOLD
+    MOVE 150.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0014"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+            " expected=E0014"
     END-IF.
