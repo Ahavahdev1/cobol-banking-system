@@ -282,6 +282,9 @@ EOD-POST-INTEREST-PAYMENT.
         *> payment was successfully posted.
         MOVE WS-SAVE-ACCRUED-INT TO ACCT-ACCRUED-INT
         ADD WS-DAILY-INT-AMT TO ACCT-ACCRUED-INT
+            ON SIZE ERROR
+                CONTINUE
+        END-ADD
         MOVE WS-SAVE-YTD-INT-PAID TO ACCT-YTD-INT-PAID
         *> Advance next-pay-date even on failure to prevent infinite
         *> retry on every subsequent EOD run. Accrued interest is

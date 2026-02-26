@@ -43,6 +43,9 @@ MAIN-PROGRAM.
     PERFORM TEST-RD-007
     PERFORM TEST-RD-008
     PERFORM TEST-RD-009
+    PERFORM TEST-RD-010
+    PERFORM TEST-RD-011
+    PERFORM TEST-RD-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -366,4 +369,106 @@ TEST-RD-009.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-RD-RESULT-CODE " expected=E0081"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> RD-010: Closed savings account -> E0034, not allowed
+*> ---------------------------------------------------------------
+TEST-RD-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "RD-010: Closed acct=E0034" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-REGD-REQUEST
+    INITIALIZE WS-REGD-RESULT
+    MOVE "C" TO ACCT-STATUS
+    MOVE "SAV1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE "OL" TO WS-RD-TXN-CHANNEL
+    MOVE "XFR" TO WS-RD-TXN-TYPE
+    MOVE 0 TO WS-RD-CURRENT-COUNT
+    CALL "REGDCHK0" USING ACCT-RECORD WS-REGD-REQUEST
+                          WS-REGD-RESULT
+    IF WS-RD-RESULT-CODE = "E0034"
+        IF WS-RD-ALLOWED = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " allowed=" WS-RD-ALLOWED " expected=N"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-RD-RESULT-CODE " expected=E0034"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> RD-011: Frozen savings account -> E0033, not allowed
+*> ---------------------------------------------------------------
+TEST-RD-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "RD-011: Frozen acct=E0033" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-REGD-REQUEST
+    INITIALIZE WS-REGD-RESULT
+    MOVE "F" TO ACCT-STATUS
+    MOVE "SAV1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE "OL" TO WS-RD-TXN-CHANNEL
+    MOVE "XFR" TO WS-RD-TXN-TYPE
+    MOVE 2 TO WS-RD-CURRENT-COUNT
+    CALL "REGDCHK0" USING ACCT-RECORD WS-REGD-REQUEST
+                          WS-REGD-RESULT
+    IF WS-RD-RESULT-CODE = "E0033"
+        IF WS-RD-ALLOWED = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " allowed=" WS-RD-ALLOWED " expected=N"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-RD-RESULT-CODE " expected=E0033"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> RD-012: Escheated savings account -> E0044, not allowed
+*> ---------------------------------------------------------------
+TEST-RD-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "RD-012: Escheated acct=E0044" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-REGD-REQUEST
+    INITIALIZE WS-REGD-RESULT
+    MOVE "E" TO ACCT-STATUS
+    MOVE "SAV1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE "OL" TO WS-RD-TXN-CHANNEL
+    MOVE "XFR" TO WS-RD-TXN-TYPE
+    MOVE 0 TO WS-RD-CURRENT-COUNT
+    CALL "REGDCHK0" USING ACCT-RECORD WS-REGD-REQUEST
+                          WS-REGD-RESULT
+    IF WS-RD-RESULT-CODE = "E0044"
+        IF WS-RD-ALLOWED = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " allowed=" WS-RD-ALLOWED " expected=N"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-RD-RESULT-CODE " expected=E0044"
     END-IF.

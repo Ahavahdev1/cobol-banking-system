@@ -32,6 +32,26 @@ MAIN-LOGIC.
     MOVE "N" TO LS-RD-LIMIT-REACHED
     MOVE LS-RD-CURRENT-COUNT TO LS-RD-NEW-COUNT
 
+    *> Reject closed, frozen, and escheated accounts
+    IF ACCT-STATUS = "C"
+        MOVE "E0034" TO LS-RD-RESULT-CODE
+        MOVE "Account closed" TO LS-RD-RESULT-MSG
+        MOVE "N" TO LS-RD-ALLOWED
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0033" TO LS-RD-RESULT-CODE
+        MOVE "Account frozen" TO LS-RD-RESULT-MSG
+        MOVE "N" TO LS-RD-ALLOWED
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0044" TO LS-RD-RESULT-CODE
+        MOVE "Account escheated" TO LS-RD-RESULT-MSG
+        MOVE "N" TO LS-RD-ALLOWED
+        GOBACK
+    END-IF
+
     *> Checking accounts are exempt from Regulation D
     IF ACCT-SUB-TYPE = "CH"
         MOVE "E0000" TO LS-RD-RESULT-CODE
