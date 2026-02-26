@@ -86,6 +86,12 @@ PROCESS-SEND.
         MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "D"
+        MOVE "E0013" TO LS-WIRE-RESULT-CODE
+        MOVE "Account is dormant - wires not permitted"
+            TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Validate sufficient funds
     IF WIRE-AMOUNT > ACCT-AVAIL-BAL
@@ -145,6 +151,11 @@ PROCESS-SEND.
                 TO LS-WIRE-RESULT-MSG
             GOBACK
     END-COMPUTE
+
+    *> Track MTD low balance after wire debit
+    IF ACCT-LEDGER-BAL < ACCT-MTD-LOW-BAL
+        MOVE ACCT-LEDGER-BAL TO ACCT-MTD-LOW-BAL
+    END-IF
 
     *> Set wire status and date
     MOVE "PR" TO WIRE-STATUS
