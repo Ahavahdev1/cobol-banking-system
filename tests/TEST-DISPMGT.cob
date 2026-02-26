@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (12 tests)
+*> Tests: File, provisional credit, resolve, inquiry (21 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-018
     PERFORM TEST-DP-019
     PERFORM TEST-DP-020
+    PERFORM TEST-DP-021
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -801,4 +802,42 @@ TEST-DP-020.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0011"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-021: PROV on escheated account -> E0050
+*> File dispute first, then set account to escheated, call PROV
+*> ---------------------------------------------------------------
+TEST-DP-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-021: PROV escheated account -> E0050"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000114 TO DSP-TXN-ID
+    MOVE 100.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 1000.00 TO ACCT-LEDGER-BAL
+    MOVE 1000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now set account to escheated and try PROV
+    MOVE "E" TO ACCT-STATUS
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0050"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0050"
     END-IF.

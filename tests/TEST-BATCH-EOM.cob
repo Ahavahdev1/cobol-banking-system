@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip, statement dates, YTD reset (16 tests)
+*>        closed-account skip, statement dates, YTD reset (18 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -46,6 +46,8 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-014
     PERFORM TEST-EM-015
     PERFORM TEST-EM-016
+    PERFORM TEST-EM-017
+    PERFORM TEST-EM-018
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -387,18 +389,20 @@ TEST-EM-011-EXIT.
     CONTINUE.
 
 *> ---------------------------------------------------------------
-*> EM-012: December EOM resets all YTD counters
-*> Year-end processing: batch date = 20261231 (December).
-*> EOMPROC0 detects month=12 and zeros all five YTD fields:
-*> ACCT-NSF-COUNT-YTD, ACCT-YTD-FEES-CHARGED,
-*> ACCT-YTD-FEES-WAIVED, ACCT-YTD-INT-EARNED, ACCT-YTD-INT-PAID.
+*> EM-012: January EOM resets prior-year YTD counters
+*> Year-end reset happens in January (not December) so December
+*> YTD totals are preserved for year-end reporting (1099s etc).
+*> January EOM resets all five YTD fields before processing,
+*> then the January fee gets assessed into the fresh YTD.
+*> NSF-COUNT-YTD = 0, YTD-FEES-CHARGED = 12.00 (Jan fee),
+*> YTD-FEES-WAIVED = 0, YTD-INT-EARNED = 0, YTD-INT-PAID = 0.
 *> ---------------------------------------------------------------
 TEST-EM-012.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "EM-012: Dec EOM resets all YTD counters"
+    MOVE "EM-012: Jan EOM resets prior-year YTD counters"
         TO WS-TEST-NAME
     PERFORM SETUP-EOM-ACCOUNT
-    *> Populate YTD fields with non-zero values
+    *> Populate YTD fields with prior-year non-zero values
     MOVE 5 TO ACCT-NSF-COUNT-YTD
     MOVE 144.00 TO ACCT-YTD-FEES-CHARGED
     MOVE 48.00 TO ACCT-YTD-FEES-WAIVED
@@ -406,7 +410,7 @@ TEST-EM-012.
     MOVE 1200.00 TO ACCT-YTD-INT-PAID
     INITIALIZE BATCH-RECORD
     INITIALIZE WS-BATCH-RESULT
-    MOVE 20261231 TO WS-BATCH-DATE
+    MOVE 20270131 TO WS-BATCH-DATE
     CALL "EOMPROC0" USING WS-BATCH-DATE
                           ACCT-RECORD
                           BATCH-RECORD
@@ -417,8 +421,9 @@ TEST-EM-012.
             " rc=" WS-BATCH-RESULT-CODE
         GO TO TEST-EM-012-EXIT
     END-IF
+    *> YTD reset happened, then January $12 fee was assessed
     IF ACCT-NSF-COUNT-YTD = 0
-        AND ACCT-YTD-FEES-CHARGED = 0
+        AND ACCT-YTD-FEES-CHARGED = 12.00
         AND ACCT-YTD-FEES-WAIVED = 0
         AND ACCT-YTD-INT-EARNED = 0
         AND ACCT-YTD-INT-PAID = 0
@@ -438,8 +443,8 @@ TEST-EM-012-EXIT.
 
 *> ---------------------------------------------------------------
 *> EM-013: November EOM does NOT reset YTD counters
-*> Non-December month: batch date = 20261130 (November).
-*> YTD counters must NOT be zeroed (only December resets them).
+*> Non-January month: batch date = 20261130 (November).
+*> YTD counters must NOT be zeroed (only January resets them).
 *> Note: ACCT-YTD-FEES-CHARGED increases by the $12.00 monthly
 *> fee assessed during EOM (144.00 + 12.00 = 156.00).
 *> ---------------------------------------------------------------
@@ -596,3 +601,89 @@ TEST-EM-016.
     END-IF.
 TEST-EM-016-EXIT.
     CONTINUE.
+
+*> ---------------------------------------------------------------
+*> EM-017: December EOM preserves YTD counters
+*> December is NOT January, so YTD reset should NOT fire.
+*> YTD-FEES should be 144.00 + 12.00 fee = 156.00.
+*> NSF-COUNT-YTD should remain unchanged at 5.
+*> ---------------------------------------------------------------
+TEST-EM-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-017: Dec EOM preserves YTD counters"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    *> Pre-populate YTD counters
+    MOVE 144.00 TO ACCT-YTD-FEES-CHARGED
+    MOVE 5 TO ACCT-NSF-COUNT-YTD
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20261231 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-NSF-COUNT-YTD = 5
+            AND ACCT-YTD-FEES-CHARGED = 156.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " nsf-ytd=" ACCT-NSF-COUNT-YTD
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " expected=156.00"
+                " nsf-ytd=" ACCT-NSF-COUNT-YTD
+                " expected=5"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-018: Waived fee -> BATCH-FEES-ASSESSED = 0
+*> Account with min-balance waiver (MB), balance above threshold.
+*> Fee is waived, so BATCH-FEES-ASSESSED should be 0.
+*> ---------------------------------------------------------------
+TEST-EM-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-018: Waived fee -> batch fees = 0"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    *> Set min-balance waiver with threshold below current balance
+    MOVE "MB" TO ACCT-FEE-WAIVER-CODE
+    MOVE 1000.00 TO ACCT-FEE-WAIVER-AMT
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260228 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF BATCH-FEES-ASSESSED = 0
+            AND ACCT-LEDGER-BAL = WS-SAVED-LEDGER-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " fees=" BATCH-FEES-ASSESSED
+                " bal=" ACCT-LEDGER-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " fees=" BATCH-FEES-ASSESSED
+                " bal=" ACCT-LEDGER-BAL
+                " expected fees=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.

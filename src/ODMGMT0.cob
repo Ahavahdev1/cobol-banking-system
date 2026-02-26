@@ -59,6 +59,11 @@ ODMGMT0-MAIN.
         MOVE "Account is frozen" TO LS-OD-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-OD-RESULT-CODE
+        MOVE "Account is escheated" TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Determine effective balance
     MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL

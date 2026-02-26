@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
 *> Tests: ACH credits, debits, returns, batch validation,
-*>        edge cases, overflow, OFAC screening (28 tests)
+*>        edge cases, overflow, OFAC screening (31 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -79,6 +79,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-028
     PERFORM TEST-AR-029
     PERFORM TEST-AR-030
+    PERFORM TEST-AR-031
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1687,4 +1688,61 @@ TEST-AR-030.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " return=" WS-ACH-RETURN-FLAG
             " code=" WS-ACH-RETURN-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-031: Successful ACH credit updates ACCT-LAST-TXN-DATE
+*> ---------------------------------------------------------------
+TEST-AR-031.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-031: ACH credit updates LAST-TXN-DATE"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 22 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "200000000031" TO WS-ACH-ACCT-NUMBER
+    MOVE 500.00 TO WS-ACH-AMOUNT
+    MOVE "PAYROLL DEPOSIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000031" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 0 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 500.00 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    MOVE 200000000031 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    *> Ensure LAST-TXN-DATE starts at zero
+    MOVE 0 TO ACCT-LAST-TXN-DATE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0000"
+        IF ACCT-LAST-TXN-DATE OF WS-ACCT-RECORD > 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " last-txn=" ACCT-LAST-TXN-DATE
+                    OF WS-ACCT-RECORD
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " last-txn=" ACCT-LAST-TXN-DATE
+                    OF WS-ACCT-RECORD
+                " expected>0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACH-RESULT-CODE
     END-IF.

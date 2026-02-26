@@ -166,6 +166,12 @@ DO-PROVISIONAL-CREDIT.
             TO LS-DSP-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-DSP-RESULT-CODE
+        MOVE "Account escheated - cannot issue credit"
+            TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Set provisional amount and date
     MOVE DSP-TXN-AMOUNT TO DSP-PROVISIONAL-AMT
@@ -258,6 +264,12 @@ DO-RESOLVE-DISPUTE.
             *> Partial: reverse difference between provisional
             *> and the partial amount the caller set in
             *> DSP-TXN-AMOUNT (the approved partial amount)
+            IF DSP-TXN-AMOUNT <= 0
+                MOVE "E0031" TO LS-DSP-RESULT-CODE
+                MOVE "Partial resolution amount must be positive"
+                    TO LS-DSP-RESULT-MSG
+                GOBACK
+            END-IF
             IF DSP-PROVISIONAL-AMT > DSP-TXN-AMOUNT
                 COMPUTE WS-REVERSE-AMT =
                     DSP-PROVISIONAL-AMT - DSP-TXN-AMOUNT

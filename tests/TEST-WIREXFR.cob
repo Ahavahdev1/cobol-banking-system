@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-WIREXFR.
 *> ================================================================
 *> TEST-WIREXFR - Test suite for Wire Transfer Processor
-*> Tests: SEND, RECV, RVRS, INQY functions (28 tests)
+*> Tests: SEND, RECV, RVRS, INQY functions (33 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -66,6 +66,7 @@ MAIN-PROGRAM.
     PERFORM TEST-WR-030
     PERFORM TEST-WR-031
     PERFORM TEST-WR-032
+    PERFORM TEST-WR-033
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1500,4 +1501,54 @@ TEST-WR-032.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
             " expected=E0050"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WR-033: Successful wire SEND updates ACCT-LAST-TXN-DATE
+*> ---------------------------------------------------------------
+TEST-WR-033.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "WR-033: SEND updates ACCT-LAST-TXN-DATE"
+        TO WS-TEST-NAME
+    INITIALIZE WS-WIRE-RECORD
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-WIRE-RESULT
+    MOVE "SEND" TO WS-WIRE-FUNCTION
+    MOVE "WR20260226000033" TO WIRE-REFERENCE-NUM
+        OF WS-WIRE-RECORD
+    MOVE 1000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
+    MOVE "JOHN DOE" TO WIRE-ORIG-NAME OF WS-WIRE-RECORD
+    MOVE "JANE SMITH" TO WIRE-BENE-NAME OF WS-WIRE-RECORD
+    MOVE "DE89370400440532013000" TO WIRE-BENE-ACCT
+        OF WS-WIRE-RECORD
+    MOVE "TELLER01" TO WIRE-CREATED-BY OF WS-WIRE-RECORD
+    MOVE 100000000033 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    *> Set LAST-TXN-DATE to 0 to verify it gets updated
+    MOVE 0 TO ACCT-LAST-TXN-DATE OF WS-ACCT-RECORD
+    CALL "WIREXFR0" USING WS-WIRE-FUNCTION
+                          WS-WIRE-RECORD
+                          WS-ACCT-RECORD
+                          WS-WIRE-RESULT
+    IF WS-WIRE-RESULT-CODE = "E0000"
+        IF ACCT-LAST-TXN-DATE OF WS-ACCT-RECORD > 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " last-txn=" ACCT-LAST-TXN-DATE
+                    OF WS-ACCT-RECORD
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " last-txn=0 expected>0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-WIRE-RESULT-CODE
     END-IF.

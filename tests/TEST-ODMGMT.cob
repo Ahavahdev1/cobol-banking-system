@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ODMGMT.
 *> ================================================================
 *> TEST-ODMGMT - Test suite for ODMGMT0 Overdraft Management
 *> Tests: Reg E opt-in, OD limits, protection transfers, NSF caps,
-*>        de minimis, acct type/status (14 tests OD-001 to OD-014)
+*>        de minimis, acct type/status (18 tests OD-001 to OD-018)
 *> ================================================================
 
 DATA DIVISION.
@@ -53,6 +53,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-015
     PERFORM TEST-OD-016
     PERFORM TEST-OD-017
+    PERFORM TEST-OD-018
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -734,4 +735,38 @@ TEST-OD-017.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-018: Escheated account -> E0050
+*> ---------------------------------------------------------------
+TEST-OD-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-018: Escheated acct -> E0050" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "E" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 100.00 TO WS-OD-TXN-AMOUNT
+    MOVE "AT" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0050"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE " expected=E0050"
     END-IF.

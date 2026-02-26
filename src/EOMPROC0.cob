@@ -113,6 +113,20 @@ MAIN-LOGIC.
 PROCESS-EOM-ACCOUNT.
     ADD 1 TO WS-ACCTS-PROCESSED
 
+    *> Step 0: Year-end reset - if processing January, reset previous
+    *> year's YTD counters BEFORE any new-year fee/interest processing.
+    *> Must happen before fee assessment so January fees start from zero.
+    COMPUTE WS-BATCH-MM =
+        FUNCTION MOD(
+            FUNCTION INTEGER-PART(LS-BATCH-DATE / 100), 100)
+    IF WS-BATCH-MM = 1
+        MOVE 0 TO ACCT-NSF-COUNT-YTD
+        MOVE 0 TO ACCT-YTD-FEES-CHARGED
+        MOVE 0 TO ACCT-YTD-FEES-WAIVED
+        MOVE 0 TO ACCT-YTD-INT-EARNED
+        MOVE 0 TO ACCT-YTD-INT-PAID
+    END-IF
+
     *> Step 1: Assess monthly fee
     PERFORM EOM-ASSESS-FEE
 
@@ -150,7 +164,7 @@ EOM-ASSESS-FEE.
                           WS-FEE-RESULT
     IF WS-FEE-RESULT-CODE = "E0000"
         IF WS-FEE-WAIVED-FLAG = "Y"
-            ADD WS-FEE-ASSESSED TO WS-TOTAL-FEES-WAIVED
+            ADD FEE-AMOUNT TO WS-TOTAL-FEES-WAIVED
         ELSE
             ADD WS-FEE-ASSESSED TO WS-TOTAL-FEES-ASSESSED
         END-IF
@@ -191,18 +205,7 @@ EOM-RESET-MTD.
     MOVE 0 TO ACCT-NSF-COUNT-TODAY
     MOVE 0 TO ACCT-OL-TXN-COUNT-MTD
     MOVE 0 TO ACCT-MTD-AVG-BAL
-    MOVE 0 TO ACCT-MTD-LOW-BAL
-    *> Year-end reset: if processing December, reset YTD counters
-    COMPUTE WS-BATCH-MM =
-        FUNCTION MOD(
-            FUNCTION INTEGER-PART(LS-BATCH-DATE / 100), 100)
-    IF WS-BATCH-MM = 12
-        MOVE 0 TO ACCT-NSF-COUNT-YTD
-        MOVE 0 TO ACCT-YTD-FEES-CHARGED
-        MOVE 0 TO ACCT-YTD-FEES-WAIVED
-        MOVE 0 TO ACCT-YTD-INT-EARNED
-        MOVE 0 TO ACCT-YTD-INT-PAID
-    END-IF.
+    MOVE 0 TO ACCT-MTD-LOW-BAL.
 
 *> ---------------------------------------------------------------
 *> Log EOM processing to audit trail

@@ -270,6 +270,10 @@ EOD-POST-INTEREST-PAYMENT.
         ADD WS-DAILY-INT-AMT TO ACCT-ACCRUED-INT
         MOVE WS-SAVE-YTD-INT-PAID TO ACCT-YTD-INT-PAID
         MOVE WS-SAVE-YTD-INT-EARNED TO ACCT-YTD-INT-EARNED
+        *> Advance next-pay-date even on failure to prevent infinite
+        *> retry on every subsequent EOD run. Accrued interest is
+        *> preserved and will be paid on the next payment cycle.
+        PERFORM ADVANCE-NEXT-PAY-DATE
         ADD 1 TO WS-ACCTS-ERRORS
     END-IF.
 
