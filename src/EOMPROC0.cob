@@ -115,7 +115,10 @@ PROCESS-EOM-ACCOUNT.
 
     *> Step 0: Year-end reset - if processing January, reset previous
     *> year's YTD counters BEFORE any new-year fee/interest processing.
-    *> Must happen before fee assessment so January fees start from zero.
+    *> CRITICAL: EOM must run BEFORE EOD on year-transition dates.
+    *> If EOD runs first, January 1 interest accruals in YTD-INT-EARNED
+    *> would be wiped by this reset. Batch orchestration must enforce
+    *> the ordering: EOM(Dec) -> EOD(Jan 1) on January processing.
     COMPUTE WS-BATCH-MM =
         FUNCTION MOD(
             FUNCTION INTEGER-PART(LS-BATCH-DATE / 100), 100)

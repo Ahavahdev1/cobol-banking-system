@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (17 tests)
+*>        batch status, multi-account, error paths (18 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +49,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-015
     PERFORM TEST-BE-016
     PERFORM TEST-BE-017
+    PERFORM TEST-BE-018
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -629,4 +630,36 @@ TEST-BE-017.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-018: At-maturity pay frequency does NOT advance pay date
+*> CD with PAY-FREQ="T", next-pay=20260601. After EOD on 20260601
+*> the pay date should NOT advance (interest held until maturity).
+*> ---------------------------------------------------------------
+TEST-BE-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-018: At-maturity no pay date advance"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "T" TO ACCT-INT-PAY-FREQ
+    MOVE 20260601 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 50.000000 TO ACCT-ACCRUED-INT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260601 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> Next-pay-date should NOT have changed from 20260601
+    IF ACCT-INT-NEXT-PAY-DATE = 20260601
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+            " next-pay=" ACCT-INT-NEXT-PAY-DATE
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " next-pay=" ACCT-INT-NEXT-PAY-DATE
+            " expected=20260601 (unchanged)"
     END-IF.

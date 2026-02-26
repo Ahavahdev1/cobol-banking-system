@@ -294,9 +294,17 @@ ADVANCE-NEXT-PAY-DATE.
                 MOVE 6 TO WS-NP-MONTHS-TO-ADD
             WHEN "A"
                 MOVE 12 TO WS-NP-MONTHS-TO-ADD
+            WHEN "T"
+                *> At Maturity: do not advance pay date
+                *> Interest held until maturity (CD/term deposit)
+                CONTINUE
             WHEN OTHER
                 MOVE 1 TO WS-NP-MONTHS-TO-ADD
         END-EVALUATE
+        IF ACCT-INT-PAY-FREQ = "T"
+            *> Skip date arithmetic for at-maturity frequency
+            GO TO ADVANCE-NEXT-PAY-DATE-EXIT
+        END-IF
         *> Decompose YYYYMMDD into parts
         MOVE ACCT-INT-NEXT-PAY-DATE TO WS-NP-DATE
         DIVIDE WS-NP-DATE BY 10000
@@ -350,6 +358,9 @@ ADVANCE-NEXT-PAY-DATE.
                 ADD 1 TO WS-ACCTS-ERRORS
         END-COMPUTE
     END-IF.
+
+ADVANCE-NEXT-PAY-DATE-EXIT.
+    EXIT.
 
 *> ---------------------------------------------------------------
 *> Log EOD processing to audit trail
