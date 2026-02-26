@@ -2,7 +2,8 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DATEUTIL.
 *> ================================================================
 *> TEST-DATEUTIL - Test suite for DATEUTIL date utility functions
-*> Tests: BDAY, WKDY, DIFF, LEAP functions (16 tests)
+*> Tests: BDAY, WKDY, DIFF, LEAP functions (20 tests)
+*> Includes P1 audit: year-end rollover + century boundary tests
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +50,9 @@ MAIN-PROGRAM.
     PERFORM TEST-DU-015
     PERFORM TEST-DU-016
     PERFORM TEST-DU-017
+    PERFORM TEST-DU-018
+    PERFORM TEST-DU-019
+    PERFORM TEST-DU-020
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -539,6 +543,98 @@ TEST-DU-017.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " expected=20260120 actual=" WS-RESULT-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-DATE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-018: DIFF across year boundary (Dec 15 2025 to Jan 15 2026)
+*>         = 31 days (P1 audit: year-end rollover)
+*> ---------------------------------------------------------------
+TEST-DU-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-018: DIFF year boundary=31" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "DIFF" TO WS-FUNCTION
+    MOVE 20251215 TO WS-DATE1
+    MOVE 20260115 TO WS-DATE2
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0000"
+        IF WS-RESULT-DAYS = 31
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=31 actual=" WS-RESULT-DAYS
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-DATE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-019: BDAY across year boundary
+*>         Dec 30 2025 (Tue) + 3 biz days
+*>         Dec 31 (Wed)=1, Jan 1 (Thu, New Year HOLIDAY skip),
+*>         Jan 2 (Fri)=2, Jan 5 (Mon)=3
+*>         Expected: 20260105
+*> ---------------------------------------------------------------
+TEST-DU-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-019: BDAY year boundary+3=Jan5" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20251230 TO WS-DATE1
+    MOVE 3 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0000"
+        IF WS-RESULT-DATE = 20260105
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=20260105 actual=" WS-RESULT-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-DATE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-020: LEAP 2100 -> N (century boundary test)
+*>         2100 is divisible by 100 but NOT by 400 -> not leap
+*> ---------------------------------------------------------------
+TEST-DU-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-020: LEAP 2100=N (century)" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "LEAP" TO WS-FUNCTION
+    MOVE 21000101 TO WS-DATE1
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0000"
+        IF WS-RESULT-FLAG = "N"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=N actual=" WS-RESULT-FLAG
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

@@ -3,7 +3,8 @@ PROGRAM-ID. TEST-INTCALC.
 *> ================================================================
 *> TEST-INTCALC - Test suite for INTCALC0 Interest Calculator
 *> Tests: Daily interest, accrual bases, tiered rates, edge cases
-*> 22 tests (IC-001 to IC-022)
+*> 25 tests (IC-001 to IC-025)
+*> Includes P1 audit: year-end rollover + century boundary tests
 *> ================================================================
 
 DATA DIVISION.
@@ -58,6 +59,9 @@ MAIN-PROGRAM.
     PERFORM TEST-IC-020
     PERFORM TEST-IC-021
     PERFORM TEST-IC-022
+    PERFORM TEST-IC-023
+    PERFORM TEST-IC-024
+    PERFORM TEST-IC-025
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -849,4 +853,130 @@ TEST-IC-022.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=0 actual=" WS-DAILY-INT-AMT
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-023: Interest accrual on Dec 31 (year boundary)
+*>         $10K @ 5% Actual/365, calc date 20251231
+*>         daily interest = 10000 * 0.05 / 365 = $1.369863
+*>         P1 audit: year-end rollover
+*> ---------------------------------------------------------------
+TEST-IC-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-023: Year boundary Dec31 $10K@5% A/365"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 10000.00 TO ACCT-COLLECTED-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "SV" TO ACCT-SUB-TYPE
+    MOVE 20251231 TO WS-CALC-DATE
+    MOVE 1.369863 TO WS-EXPECTED-INT
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0000"
+        IF WS-DAILY-INT-AMT = WS-EXPECTED-INT
+            IF WS-DAILY-INT-AMT > 0
+                ADD 1 TO WS-PASS-COUNT
+                DISPLAY "  PASS: " WS-TEST-NAME
+            ELSE
+                ADD 1 TO WS-FAIL-COUNT
+                DISPLAY "  FAIL: " WS-TEST-NAME
+                    " daily interest should be > 0"
+            END-IF
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=" WS-EXPECTED-INT
+                " actual=" WS-DAILY-INT-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-024: Actual/Actual in non-leap year 2025 -> divisor = 365
+*>         $10K @ 5% / 365 = $1.369863
+*>         P1 audit: century boundary (A/A non-leap)
+*> ---------------------------------------------------------------
+TEST-IC-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-024: A/A non-leap 2025 /365=$1.369863"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "D" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 20250615 TO WS-CALC-DATE
+    MOVE 1.369863 TO WS-EXPECTED-INT
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0000"
+        IF WS-DAILY-INT-AMT = WS-EXPECTED-INT
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=" WS-EXPECTED-INT
+                " actual=" WS-DAILY-INT-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-025: Semi-annual payment frequency triggers on pay date
+*>         Set ACCT-INT-NEXT-PAY-DATE = calc date
+*>         Verify payment is due (WS-PAYMENT-DUE = "Y")
+*>         P1 audit: payment schedule edge case
+*> ---------------------------------------------------------------
+TEST-IC-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-025: Semi-annual pmt triggers on date"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE "S" TO ACCT-INT-PAY-FREQ
+    *> Simulate ~182 days of accrued interest (semi-annual)
+    *> 182 * 1.369863 = 249.315066
+    MOVE 249.315066 TO ACCT-ACCRUED-INT
+    *> Set next pay date to calc date to trigger payment
+    MOVE 20260630 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 20260630 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0000"
+        IF WS-PAYMENT-DUE = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " pmt=" WS-PAYMENT-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " payment-due=N expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE
     END-IF.

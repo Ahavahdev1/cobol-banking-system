@@ -79,3 +79,7 @@
     *> OD errors
     05  ERR-OD-NOT-OPTED-IN       PIC X(5) VALUE "E0095".
     05  ERR-OD-LIMIT-EXCEEDED     PIC X(5) VALUE "E0096".
+    *> Wire transfer errors
+    05  ERR-WIRE-INSUF-FUNDS      PIC X(5) VALUE "E0097".
+    05  ERR-WIRE-APPROVAL-REQ     PIC X(5) VALUE "E0098".
+    05  ERR-WIRE-INVALID-REF      PIC X(5) VALUE "E0099".
