@@ -36,6 +36,12 @@ MAIN-PROGRAM.
     PERFORM TEST-DR-007
     PERFORM TEST-DR-008
     PERFORM TEST-DR-009
+    PERFORM TEST-DR-010
+    PERFORM TEST-DR-011
+    PERFORM TEST-DR-012
+    PERFORM TEST-DR-013
+    PERFORM TEST-DR-014
+    PERFORM TEST-DR-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -326,4 +332,179 @@ TEST-DR-009.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DORM-RESULT-CODE " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-010: CHKE on active account -> action "N"
+*> Active accounts should not be processed for escheatment
+*> ---------------------------------------------------------------
+TEST-DR-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-010: CHKE on active acct -> N" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE 20220101 TO ACCT-LAST-TXN-DATE
+    MOVE 20260226 TO WS-BATCH-DATE
+    MOVE "CHKE" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "N"
+        AND ACCT-STATUS = "A"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+            " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-011: CHKE with last txn date = 0 -> action "N"
+*> Dormant account with no txn date should skip escheatment
+*> ---------------------------------------------------------------
+TEST-DR-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-011: CHKE last-txn=0 -> N" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE "D" TO ACCT-STATUS
+    MOVE 0 TO ACCT-LAST-TXN-DATE
+    MOVE 20260226 TO WS-BATCH-DATE
+    MOVE "CHKE" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "N"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-012: CHKD boundary at exactly 366 days -> NOT dormant
+*> Batch=20270301, Last txn=20260228 -> diff = 366 (not > 366)
+*> ---------------------------------------------------------------
+TEST-DR-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-012: CHKD 366 days -> N (boundary)" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE 20260228 TO ACCT-LAST-TXN-DATE
+    MOVE 20270301 TO WS-BATCH-DATE
+    MOVE "CHKD" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "N"
+        AND ACCT-STATUS = "A"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+            " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-013: CHKD boundary at 367 days -> dormant
+*> Batch=20270302, Last txn=20260228 -> diff = 367 (> 366)
+*> ---------------------------------------------------------------
+TEST-DR-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-013: CHKD 367 days -> D (boundary)" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE 20260228 TO ACCT-LAST-TXN-DATE
+    MOVE 20270302 TO WS-BATCH-DATE
+    MOVE "CHKD" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "D"
+        AND ACCT-STATUS = "D"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+            " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-014: CHKE boundary at exactly 1096 days -> NOT escheated
+*> Batch=20270302, Last txn=20240301 -> diff = 1096 (not > 1096)
+*> ---------------------------------------------------------------
+TEST-DR-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-014: CHKE 1096 days -> N (boundary)" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE "D" TO ACCT-STATUS
+    MOVE 20240301 TO ACCT-LAST-TXN-DATE
+    MOVE 20270302 TO WS-BATCH-DATE
+    MOVE "CHKE" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "N"
+        AND ACCT-STATUS = "D"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+            " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-015: CHKE boundary at 1097 days -> escheated
+*> Batch=20270303, Last txn=20240301 -> diff = 1097 (> 1096)
+*> ---------------------------------------------------------------
+TEST-DR-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-015: CHKE 1097 days -> E (boundary)" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE "D" TO ACCT-STATUS
+    MOVE 20240301 TO ACCT-LAST-TXN-DATE
+    MOVE 20270303 TO WS-BATCH-DATE
+    MOVE "CHKE" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-ACTION-TAKEN = "E"
+        AND ACCT-STATUS = "E"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " action=" WS-DORM-ACTION-TAKEN
+            " status=" ACCT-STATUS
     END-IF.

@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-FEECALC.
 *> ================================================================
 *> TEST-FEECALC - Test suite for FEECALC0 Fee Assessment Engine
 *> Tests: Monthly fees, waivers, NSF fees, de minimis, YTD tracking
-*> 16 tests (FE-001 to FE-016)
+*> 17 tests (FE-001 to FE-017)
 *> ================================================================
 
 DATA DIVISION.
@@ -50,6 +50,7 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-014
     PERFORM TEST-FE-015
     PERFORM TEST-FE-016
+    PERFORM TEST-FE-017
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -701,4 +702,48 @@ TEST-FE-016.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0001 actual=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-017: NSF counter increment verification
+*>         All NSF counts start at 0, after one NSF fee all = 1
+*> ---------------------------------------------------------------
+TEST-FE-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-017: NSF counters incremented" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE -100.00 TO ACCT-LEDGER-BAL
+    MOVE "A" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-YTD
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "NSF" TO FEE-TYPE
+    MOVE 36.00 TO FEE-AMOUNT
+    MOVE "N" TO FEE-WAIVER-ELIGIBLE
+    MOVE 04 TO FEE-NSF-DAILY-MAX
+    MOVE 5.00 TO FEE-NSF-DE-MINIMIS
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0000"
+        IF ACCT-NSF-COUNT-TODAY = 1
+            AND ACCT-NSF-COUNT-MTD = 1
+            AND ACCT-NSF-COUNT-YTD = 1
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " today=" ACCT-NSF-COUNT-TODAY
+                " mtd=" ACCT-NSF-COUNT-MTD
+                " ytd=" ACCT-NSF-COUNT-YTD
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
     END-IF.

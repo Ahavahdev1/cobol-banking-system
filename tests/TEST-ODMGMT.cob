@@ -50,6 +50,9 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-012
     PERFORM TEST-OD-013
     PERFORM TEST-OD-014
+    PERFORM TEST-OD-015
+    PERFORM TEST-OD-016
+    PERFORM TEST-OD-017
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -611,4 +614,124 @@ TEST-OD-014.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE " expected=E0011"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-015: Frozen account -> E0012
+*> ---------------------------------------------------------------
+TEST-OD-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-015: Frozen acct rejected" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "F" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 200.00 TO WS-OD-TXN-AMOUNT
+    MOVE "AT" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0012"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE " expected=E0012"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-016: Non-opted-in, online channel "ON" -> allowed
+*> Reg E only blocks ATM/POS; online channel passes through
+*> ---------------------------------------------------------------
+TEST-OD-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-016: Not opted-in online allowed" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "N" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 200.00 TO WS-OD-TXN-AMOUNT
+    MOVE "ON" TO WS-OD-TXN-CHANNEL
+    MOVE "OLN" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0000"
+        IF WS-OD-APPROVED = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " approved=" WS-OD-APPROVED " expected=Y"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-017: OD protection enabled but no actual overdraft
+*> Balance 500, txn 200 -> no shortfall, transfer = 0
+*> ---------------------------------------------------------------
+TEST-OD-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-017: OD protection no overdraft" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE 500.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "T" TO ACCT-OD-PROTECTION
+    MOVE 200000000001 TO ACCT-OD-LINKED-ACCT
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 200.00 TO WS-OD-TXN-AMOUNT
+    MOVE "AT" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260215 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0000"
+        IF WS-OD-APPROVED = "Y"
+            AND WS-OD-TRANSFER-AMT = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " transfer=" WS-OD-TRANSFER-AMT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " approved=" WS-OD-APPROVED
+                " transfer=" WS-OD-TRANSFER-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
     END-IF.

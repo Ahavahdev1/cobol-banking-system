@@ -43,6 +43,10 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-013
     PERFORM TEST-DP-014
     PERFORM TEST-DP-015
+    PERFORM TEST-DP-016
+    PERFORM TEST-DP-017
+    PERFORM TEST-DP-018
+    PERFORM TEST-DP-019
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -610,4 +614,152 @@ TEST-DP-015.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0011"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-016: Invalid function code -> E0001
+*> ---------------------------------------------------------------
+TEST-DP-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-016: Invalid function -> E0001"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "XXXX" TO WS-DSP-FUNCTION
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-017: PROV on frozen account -> E0012
+*> File dispute first, then set account to frozen, call PROV
+*> ---------------------------------------------------------------
+TEST-DP-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-017: PROV frozen account -> E0012"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000110 TO DSP-TXN-ID
+    MOVE 300.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 2000.00 TO ACCT-LEDGER-BAL
+    MOVE 2000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now freeze the account and try PROV
+    MOVE "F" TO ACCT-STATUS
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0012"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0012"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-018: Overflow on provisional credit -> E0040
+*> Set balance to max, file dispute for $1.00, call PROV
+*> ---------------------------------------------------------------
+TEST-DP-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-018: PROV overflow -> E0040"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000111 TO DSP-TXN-ID
+    MOVE 1.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 9999999999999.99 TO ACCT-LEDGER-BAL
+    MOVE 9999999999999.99 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now issue provisional credit (should overflow)
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0040"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0040"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-019: RSLV deny without prior provisional credit
+*> File dispute (status P), skip PROV, RSLV with "DN"
+*> Expect status "D", balance unchanged
+*> ---------------------------------------------------------------
+TEST-DP-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-019: RSLV deny no prior PROV"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000112 TO DSP-TXN-ID
+    MOVE 500.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 3000.00 TO ACCT-LEDGER-BAL
+    MOVE 3000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Save balance before resolve
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-BAL
+    *> Skip PROV, go straight to RSLV deny
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "DN" TO DSP-RESOLUTION-CODE
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0000"
+        IF DSP-STATUS = "D"
+            AND ACCT-LEDGER-BAL = WS-SAVED-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" DSP-STATUS
+                " bal=" ACCT-LEDGER-BAL
+                " expected-bal=" WS-SAVED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE
     END-IF.

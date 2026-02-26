@@ -131,9 +131,11 @@ ODMGMT0-MAIN.
                 MOVE WS-NSF-FEE-AMOUNT TO LS-OD-FEE-ASSESSED
             END-IF
         END-IF
-        *> Increment daily and monthly NSF counts
+        *> Increment daily, monthly, and yearly NSF counts
         ADD 1 TO LS-OD-NEW-NSF-COUNT
+        ADD 1 TO ACCT-NSF-COUNT-TODAY
         ADD 1 TO ACCT-NSF-COUNT-MTD
+        ADD 1 TO ACCT-NSF-COUNT-YTD
     END-IF
 
     MOVE "E0000" TO LS-OD-RESULT-CODE

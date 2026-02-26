@@ -129,8 +129,8 @@ MAIN-LOGIC.
                     TO LS-INT-RESULT-MSG
                 GOBACK
         END-COMPUTE
-        *> After payment reset: new accrued = today's interest only
-        MOVE WS-DAILY-INTEREST TO LS-NEW-ACCRUED
+        *> After payment reset: accrued = 0 (today's interest paid out)
+        MOVE ZEROS TO LS-NEW-ACCRUED
     ELSE
         *> Normal accrual: new accrued = existing + today
         COMPUTE LS-NEW-ACCRUED =

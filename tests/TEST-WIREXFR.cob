@@ -908,11 +908,12 @@ TEST-WR-018.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> WR-019: RECV - legal hold -> E0035
+*> WR-019: RECV - legal hold allows incoming credits -> E0000
+*> Legal holds block debits (outgoing) only, not credits (incoming)
 *> ---------------------------------------------------------------
 TEST-WR-019.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "WR-019: RECV legal hold -> E0035"
+    MOVE "WR-019: RECV legal hold allows credit"
         TO WS-TEST-NAME
     INITIALIZE WS-WIRE-RECORD
     INITIALIZE WS-ACCT-RECORD
@@ -923,7 +924,7 @@ TEST-WR-019.
     MOVE 5000.00 TO WIRE-AMOUNT OF WS-WIRE-RECORD
     MOVE "FOREIGN SENDER" TO WIRE-ORIG-NAME
         OF WS-WIRE-RECORD
-    *> Active account but legal hold
+    *> Active account with legal hold
     MOVE 100000000019 TO ACCT-NUMBER OF WS-ACCT-RECORD
     MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
     MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
@@ -934,18 +935,30 @@ TEST-WR-019.
     MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
     MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
     MOVE "Y" TO ACCT-LEGAL-HOLD OF WS-ACCT-RECORD
+    MOVE 15000.00 TO WS-EXPECTED-LEDGER
+    MOVE 15000.00 TO WS-EXPECTED-AVAIL
     CALL "WIREXFR0" USING WS-WIRE-FUNCTION
                           WS-WIRE-RECORD
                           WS-ACCT-RECORD
                           WS-WIRE-RESULT
-    IF WS-WIRE-RESULT-CODE = "E0035"
-        ADD 1 TO WS-PASS-COUNT
-        DISPLAY "  PASS: " WS-TEST-NAME
+    IF WS-WIRE-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+            = WS-EXPECTED-LEDGER
+            AND ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+            = WS-EXPECTED-AVAIL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ledger=" ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+                " avail=" ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+        END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
-            " expected=E0035"
+            " expected=E0000"
     END-IF.
 
 *> ---------------------------------------------------------------

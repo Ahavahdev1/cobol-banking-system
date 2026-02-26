@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-HOLDCALC.
 *> ================================================================
 *> TEST-HOLDCALC - Test suite for HOLDCALC0 Reg CC Hold Calc
 *> Tests: Local/non-local checks, treasury, large deposits, cash,
-*>        wire, new accounts, exceptions (14 tests HC-001 to HC-014)
+*>        wire, new accounts, exceptions (17 tests HC-001 to HC-017)
 *> ================================================================
 
 DATA DIVISION.
@@ -56,6 +56,9 @@ MAIN-PROGRAM.
     PERFORM TEST-HC-012
     PERFORM TEST-HC-013
     PERFORM TEST-HC-014
+    PERFORM TEST-HC-015
+    PERFORM TEST-HC-016
+    PERFORM TEST-HC-017
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -579,6 +582,123 @@ TEST-HC-014.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " rem=" WS-HOLD-REMAINING-AMT
                 " exc=" WS-HOLD-EXCEPTION-FLAG
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-015: Zero deposit amount ($0.00, local check)
+*>         next-day = $0, remainder = $0
+*> ---------------------------------------------------------------
+TEST-HC-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-015: Zero deposit $0 local check"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 0.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "LC" TO WS-HR-CHECK-TYPE
+    MOVE 20260215 TO WS-HR-DEPOSIT-DATE
+    MOVE 20200101 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    MOVE 0.00 TO WS-EXPECTED-NEXT-DAY
+    MOVE 0.00 TO WS-EXPECTED-REMAINDER
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-NEXT-DAY-AMT = WS-EXPECTED-NEXT-DAY
+            AND WS-HOLD-REMAINING-AMT = WS-EXPECTED-REMAINDER
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " nxt=" WS-HOLD-NEXT-DAY-AMT
+                " rem=" WS-HOLD-REMAINING-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-016: Cashier check "CA" $10,000: same as treasury
+*>         next-day=$5,525, remainder=$4,475
+*> ---------------------------------------------------------------
+TEST-HC-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-016: Cashier chk $10K same as treasury"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 10000.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "CA" TO WS-HR-CHECK-TYPE
+    MOVE 20260215 TO WS-HR-DEPOSIT-DATE
+    MOVE 20200101 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    MOVE 5525.00 TO WS-EXPECTED-NEXT-DAY
+    MOVE 4475.00 TO WS-EXPECTED-REMAINDER
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-NEXT-DAY-AMT = WS-EXPECTED-NEXT-DAY
+            AND WS-HOLD-REMAINING-AMT = WS-EXPECTED-REMAINDER
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " nxt=" WS-HOLD-NEXT-DAY-AMT
+                " rem=" WS-HOLD-REMAINING-AMT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-HOLD-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> HC-017: Unknown check type "XX" -> WHEN OTHER path
+*>         Treated as check deposit: next-day=$225, rem=$775
+*> ---------------------------------------------------------------
+TEST-HC-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "HC-017: Unknown type XX -> check deposit"
+        TO WS-TEST-NAME
+    INITIALIZE WS-HOLD-REQUEST
+    INITIALIZE HOLD-RECORD
+    INITIALIZE WS-HOLD-RESULT
+    MOVE 100000000001 TO WS-HR-ACCT-NUMBER
+    MOVE 1000.00 TO WS-HR-DEPOSIT-AMT
+    MOVE "XX" TO WS-HR-CHECK-TYPE
+    MOVE 20260215 TO WS-HR-DEPOSIT-DATE
+    MOVE 20200101 TO WS-HR-ACCT-OPEN-DATE
+    MOVE "N" TO WS-HR-IS-REDEPOSIT
+    MOVE "N" TO WS-HR-REPEATED-OD
+    MOVE 225.00 TO WS-EXPECTED-NEXT-DAY
+    MOVE 775.00 TO WS-EXPECTED-REMAINDER
+    CALL "HOLDCALC0" USING WS-HOLD-REQUEST HOLD-RECORD
+                           WS-HOLD-RESULT
+    IF WS-HOLD-RESULT-CODE = "E0000"
+        IF WS-HOLD-NEXT-DAY-AMT = WS-EXPECTED-NEXT-DAY
+            AND WS-HOLD-REMAINING-AMT = WS-EXPECTED-REMAINDER
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " nxt=" WS-HOLD-NEXT-DAY-AMT
+                " rem=" WS-HOLD-REMAINING-AMT
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

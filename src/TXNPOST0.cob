@@ -29,11 +29,13 @@ PROCEDURE DIVISION USING TXN-RECORD
 MAIN-LOGIC.
     PERFORM VALIDATE-AMOUNT
     PERFORM VALIDATE-DR-CR
-    PERFORM VALIDATE-ACCOUNT-STATUS
-    *> For reversals, swap the debit/credit direction
+    *> For reversals, swap the debit/credit direction before
+    *> account status validation so legal-hold check uses
+    *> the correct (swapped) DR/CR indicator
     IF TXN-TYPE = "REV"
         PERFORM SETUP-REVERSAL
     END-IF
+    PERFORM VALIDATE-ACCOUNT-STATUS
     PERFORM CHECK-BALANCE
     PERFORM CHECK-CD-WITHDRAWAL
     PERFORM CAPTURE-BEFORE-SNAPSHOT

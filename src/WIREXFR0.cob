@@ -168,11 +168,7 @@ PROCESS-RECV.
         MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
-    IF ACCT-LEGAL-HOLD = "Y"
-        MOVE "E0035" TO LS-WIRE-RESULT-CODE
-        MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
-        GOBACK
-    END-IF
+    *> Legal hold does NOT block incoming credits (only debits)
 
     *> OFAC originator screening (P1 regulatory requirement)
     INITIALIZE OFAC-CHECK-RECORD
@@ -259,6 +255,12 @@ PROCESS-REVERSE.
 
     *> If incoming wire was credited, subtract from balance
     IF WIRE-TYPE = "I"
+        IF WIRE-AMOUNT > ACCT-AVAIL-BAL
+            MOVE "E0003" TO LS-WIRE-RESULT-CODE
+            MOVE "Insufficient funds for wire reversal"
+                TO LS-WIRE-RESULT-MSG
+            GOBACK
+        END-IF
         SUBTRACT WIRE-AMOUNT FROM ACCT-LEDGER-BAL
             ON SIZE ERROR
                 MOVE "E0040" TO LS-WIRE-RESULT-CODE

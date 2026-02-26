@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-APYCALC.
 *> ================================================================
 *> TEST-APYCALC - Test suite for APYCALC0 APY/APR Calculator
 *> Tests: APY compounding frequencies, edge cases, loan APR
-*> 9 tests (AY-001 to AY-009)
+*> 11 tests (AY-001 to AY-011)
 *> Regulation DD (Truth in Savings) - 12 CFR 1030
 *> ================================================================
 
@@ -45,6 +45,8 @@ MAIN-PROGRAM.
     PERFORM TEST-AY-007
     PERFORM TEST-AY-008
     PERFORM TEST-AY-009
+    PERFORM TEST-AY-010
+    PERFORM TEST-AY-011
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -359,6 +361,82 @@ TEST-AY-009.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " APR=" WS-APR-VALUE
                 " expected=006.5000000"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-APY-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AY-010: 5% semi-annual compounding -> APY ~5.0625%
+*>         APY = (1 + 0.05/2)^2 - 1 = 5.0625%
+*>         Verify: > 5.06 and < 5.07
+*> ---------------------------------------------------------------
+TEST-AY-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AY-010: 5% semi-annual -> APY ~5.0625%"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-APY-RESULT
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "S" TO ACCT-INT-COMPOUND-FREQ
+    MOVE "S" TO ACCT-INT-PAY-FREQ
+    MOVE "D" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    CALL "APYCALC0" USING ACCT-RECORD WS-APY-RESULT
+    MOVE 5.0600000 TO WS-LOW-BOUND
+    MOVE 5.0700000 TO WS-HIGH-BOUND
+    IF WS-APY-RESULT-CODE = "E0000"
+        IF WS-APY-VALUE > WS-LOW-BOUND
+            AND WS-APY-VALUE < WS-HIGH-BOUND
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " APY=" WS-APY-VALUE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " APY=" WS-APY-VALUE
+                " expected 5.06-5.07"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-APY-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AY-011: 5% at-maturity compounding "T" -> APY = 5.0000000
+*>         Periods = 1, APY should equal nominal rate
+*>         Verify: > 4.99 and < 5.01
+*> ---------------------------------------------------------------
+TEST-AY-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AY-011: 5% at-maturity -> APY = 5.0%"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-APY-RESULT
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "T" TO ACCT-INT-COMPOUND-FREQ
+    MOVE "T" TO ACCT-INT-PAY-FREQ
+    MOVE "D" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    CALL "APYCALC0" USING ACCT-RECORD WS-APY-RESULT
+    MOVE 4.9900000 TO WS-LOW-BOUND
+    MOVE 5.0100000 TO WS-HIGH-BOUND
+    IF WS-APY-RESULT-CODE = "E0000"
+        IF WS-APY-VALUE > WS-LOW-BOUND
+            AND WS-APY-VALUE < WS-HIGH-BOUND
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " APY=" WS-APY-VALUE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " APY=" WS-APY-VALUE
+                " expected 4.99-5.01"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
