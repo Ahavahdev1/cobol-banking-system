@@ -42,6 +42,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DR-013
     PERFORM TEST-DR-014
     PERFORM TEST-DR-015
+    PERFORM TEST-DR-016
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -507,4 +508,32 @@ TEST-DR-015.
             " rc=" WS-DORM-RESULT-CODE
             " action=" WS-DORM-ACTION-TAKEN
             " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-016: STAT restricted account -> "Account is restricted"
+*> Verifies R status produces correct message (not "Unknown")
+*> ---------------------------------------------------------------
+TEST-DR-016.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-016: STAT restricted -> msg ok" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE "R" TO ACCT-STATUS
+    MOVE 20260101 TO ACCT-LAST-TXN-DATE
+    MOVE 20260226 TO WS-BATCH-DATE
+    MOVE "STAT" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0000"
+        AND WS-DORM-RESULT-MSG(1:22) = "Account is restricted "
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE
+            " msg=" WS-DORM-RESULT-MSG
     END-IF.

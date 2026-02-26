@@ -139,6 +139,8 @@ STATUS-INQUIRY.
             MOVE "Account is closed" TO LS-DORM-RESULT-MSG
         WHEN "F"
             MOVE "Account is frozen" TO LS-DORM-RESULT-MSG
+        WHEN "R"
+            MOVE "Account is restricted" TO LS-DORM-RESULT-MSG
         WHEN OTHER
             MOVE "Unknown account status" TO LS-DORM-RESULT-MSG
     END-EVALUATE.

@@ -77,6 +77,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-044
     PERFORM TEST-TP-045
     PERFORM TEST-TP-046
+    PERFORM TEST-TP-047
+    PERFORM TEST-TP-048
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1532,4 +1534,100 @@ TEST-TP-046.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-TXN-RESULT-CODE
             " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-047: REV deposit GL mapping: DR=4010, CR=1010
+*> Reversing a deposit (original C->swapped to D): GL debits the
+*> deposit account and credits cash, opposite of a normal deposit
+*> ---------------------------------------------------------------
+TEST-TP-047.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-047: REV deposit GL DR4010 CR1010"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    INITIALIZE TXN-RECORD
+    MOVE 000000000000047 TO TXN-ID
+    MOVE 00001 TO TXN-SEQUENCE
+    MOVE 000012345678 TO TXN-ACCT-NUMBER
+    MOVE 2 TO TXN-ACCT-CHECK-DIGIT
+    MOVE 0001 TO TXN-BRANCH-ID
+    MOVE "TELLER01" TO TXN-TELLER-ID
+    MOVE "BR" TO TXN-CHANNEL
+    MOVE "REV" TO TXN-TYPE
+    MOVE "C" TO TXN-DR-CR
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 20260226 TO TXN-POST-DATE
+    MOVE 120000 TO TXN-POST-TIME
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF WS-GL-DR-ACCOUNT = 4010
+            AND WS-GL-CR-ACCOUNT = 1010
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " DR=" WS-GL-DR-ACCOUNT
+                " CR=" WS-GL-CR-ACCOUNT
+                " expected DR=4010 CR=1010"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-048: REV withdrawal GL mapping: DR=1010, CR=4010
+*> Reversing a withdrawal (original D->swapped to C): GL debits
+*> cash and credits the deposit account
+*> ---------------------------------------------------------------
+TEST-TP-048.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-048: REV withdrawal GL DR1010 CR4010"
+        TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    INITIALIZE TXN-RECORD
+    MOVE 000000000000048 TO TXN-ID
+    MOVE 00001 TO TXN-SEQUENCE
+    MOVE 000012345678 TO TXN-ACCT-NUMBER
+    MOVE 2 TO TXN-ACCT-CHECK-DIGIT
+    MOVE 0001 TO TXN-BRANCH-ID
+    MOVE "TELLER01" TO TXN-TELLER-ID
+    MOVE "BR" TO TXN-CHANNEL
+    MOVE "REV" TO TXN-TYPE
+    MOVE "D" TO TXN-DR-CR
+    MOVE 200.00 TO TXN-AMOUNT
+    MOVE 20260226 TO TXN-POST-DATE
+    MOVE 120000 TO TXN-POST-TIME
+    MOVE 20260226 TO TXN-EFFECTIVE-DATE
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF WS-GL-DR-ACCOUNT = 1010
+            AND WS-GL-CR-ACCOUNT = 4010
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " DR=" WS-GL-DR-ACCOUNT
+                " CR=" WS-GL-CR-ACCOUNT
+                " expected DR=1010 CR=4010"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
     END-IF.
