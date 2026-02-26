@@ -92,6 +92,12 @@ MAIN-LOGIC.
             PERFORM CALC-CHECK-DEPOSIT
     END-EVALUATE
 
+    *> Bail out if release date computation failed
+    IF LS-HOLD-RESULT-CODE NOT = SPACES
+        AND LS-HOLD-RESULT-CODE NOT = "E0000"
+        GOBACK
+    END-IF
+
     *> Check exception conditions for check deposits only
     IF LS-HR-CHECK-TYPE NOT = "CS"
         AND LS-HR-CHECK-TYPE NOT = "WR"
@@ -102,6 +108,10 @@ MAIN-LOGIC.
     IF WS-EXCEPTION-FLAG = "Y"
         ADD WS-REGCC-EXCEPTION-DAYS TO WS-HOLD-DAYS
         PERFORM COMPUTE-RELEASE-DATE
+        IF LS-HOLD-RESULT-CODE NOT = SPACES
+            AND LS-HOLD-RESULT-CODE NOT = "E0000"
+            GOBACK
+        END-IF
     END-IF
 
     *> Populate hold record

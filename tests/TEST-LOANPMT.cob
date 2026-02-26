@@ -64,6 +64,9 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-040
     PERFORM TEST-LP-041
     PERFORM TEST-LP-042
+    PERFORM TEST-LP-043
+    PERFORM TEST-LP-044
+    PERFORM TEST-LP-045
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1185,4 +1188,79 @@ TEST-LP-042.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0032 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-043: PMNT frozen loan -> E0012
+*> ---------------------------------------------------------------
+TEST-LP-043.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-043: PMNT frozen loan=E0012"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "F" TO ACCT-STATUS
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0012"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0012 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-044: LATE frozen loan -> E0012
+*> ---------------------------------------------------------------
+TEST-LP-044.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-044: LATE frozen loan=E0012"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "F" TO ACCT-STATUS
+    MOVE "LATE" TO WS-LOAN-FUNCTION
+    MOVE 0 TO WS-PAYMENT-AMT
+    MOVE 20260401 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0012"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0012 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-045: POFF frozen loan -> E0012
+*> ---------------------------------------------------------------
+TEST-LP-045.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-045: POFF frozen loan=E0012"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "F" TO ACCT-STATUS
+    MOVE "POFF" TO WS-LOAN-FUNCTION
+    MOVE 0 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0012"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0012 actual=" WS-LOAN-RESULT-CODE
     END-IF.

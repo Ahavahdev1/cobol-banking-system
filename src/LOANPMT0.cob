@@ -78,6 +78,11 @@ PROCESS-PAYMENT.
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is frozen" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-DECEASED = "Y"
         MOVE "E0036" TO LS-LOAN-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-LOAN-RESULT-MSG
@@ -240,6 +245,11 @@ CHECK-LATE.
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is frozen" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-DECEASED = "Y"
         MOVE "E0036" TO LS-LOAN-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-LOAN-RESULT-MSG
@@ -307,6 +317,11 @@ CALC-PAYOFF.
     IF ACCT-STATUS = "E"
         MOVE "E0044" TO LS-LOAN-RESULT-CODE
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is frozen" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
     IF ACCT-DECEASED = "Y"
