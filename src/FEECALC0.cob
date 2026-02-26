@@ -113,6 +113,16 @@ PROCESS-MONTHLY-FEE.
         GO TO PROCESS-MONTHLY-FEE-EXIT
     END-IF
 
+    *> 4. Age-based waiver (AG) - NOT IMPLEMENTED
+    *> The fee schedule defines FEE-AGE-WAIVER-MIN and
+    *> FEE-AGE-WAIVER-MAX thresholds, but this module only
+    *> receives ACCT-RECORD and FEE-SCHEDULE-RECORD. The
+    *> customer's date of birth (and therefore age) is in
+    *> CIF-RECORD which is not part of this interface.
+    *> Implementing AG waivers requires adding CIF-RECORD
+    *> to the FEECALC0 LINKAGE SECTION, or pre-computing
+    *> an age-eligible flag in the caller.
+
     *> No waiver applies - charge the fee
     MOVE FEE-AMOUNT TO LS-FEE-ASSESSED
     MOVE "N" TO LS-FEE-WAIVED-FLAG
@@ -130,6 +140,14 @@ PROCESS-MONTHLY-FEE-EXIT.
 
 PROCESS-NSF-FEE.
     *> De minimis check: if ABS(balance) < de minimis, no fee
+    *> LIMITATION: This compares the absolute ledger balance against
+    *> the de minimis threshold. Per CFPB guidance the de minimis
+    *> check should compare the overdraft amount (i.e., how much the
+    *> specific transaction exceeded the available balance). However,
+    *> this module only receives ACCT-RECORD and FEE-SCHEDULE-RECORD
+    *> and does not have the originating transaction amount. Fixing
+    *> this requires adding the transaction amount to the FEECALC0
+    *> interface (LINKAGE SECTION).
     IF ACCT-LEDGER-BAL < 0
         MULTIPLY ACCT-LEDGER-BAL BY -1
             GIVING WS-ABS-BALANCE

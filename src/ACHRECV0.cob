@@ -272,9 +272,13 @@ PROCESS-TRANSACTION.
 *> VALIDATE-AMOUNT - Ensure ACH amount is positive
 *> ---------------------------------------------------------------
 VALIDATE-AMOUNT.
-    IF LS-ACH-AMOUNT <= 0
-        MOVE "E0095" TO LS-ACH-RESULT-CODE
-        MOVE "INVALID ACH AMOUNT" TO LS-ACH-RESULT-MSG
+    IF LS-ACH-AMOUNT = 0
+        MOVE "E0031" TO LS-ACH-RESULT-CODE
+        MOVE "INVALID ACH AMOUNT - ZERO" TO LS-ACH-RESULT-MSG
+    ELSE IF LS-ACH-AMOUNT < 0
+        MOVE "E0032" TO LS-ACH-RESULT-CODE
+        MOVE "INVALID ACH AMOUNT - NEGATIVE" TO LS-ACH-RESULT-MSG
+    END-IF
     END-IF.
 
 *> ---------------------------------------------------------------

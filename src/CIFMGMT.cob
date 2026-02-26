@@ -92,6 +92,13 @@ VALIDATE-CIF.
         EXIT PARAGRAPH
     END-IF
 
+    IF CIF-DOB = 0
+        MOVE "E0030" TO LS-CIF-RESULT-CODE
+        MOVE "Invalid or missing date of birth"
+            TO LS-CIF-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     IF CIF-DOB > WS-CURRENT-DATE
         MOVE "E0028" TO LS-CIF-RESULT-CODE
         MOVE "Future date of birth" TO LS-CIF-RESULT-MSG
@@ -123,6 +130,12 @@ INIT-CIF.
     MOVE WS-CURRENT-DATE TO CIF-CREATED-DATE
     MOVE WS-CURRENT-TIME TO CIF-CREATED-TIME
     MOVE "N" TO CIF-CIP-VERIFIED
+
+    *> Initialize regulatory fields to safe defaults
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE "N" TO CIF-CTR-EXEMPT
+    MOVE "US" TO CIF-COUNTRY
 
     MOVE "E0000" TO LS-CIF-RESULT-CODE
     MOVE "CIF initialized successfully" TO LS-CIF-RESULT-MSG.

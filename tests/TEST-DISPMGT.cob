@@ -40,6 +40,9 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-010
     PERFORM TEST-DP-011
     PERFORM TEST-DP-012
+    PERFORM TEST-DP-013
+    PERFORM TEST-DP-014
+    PERFORM TEST-DP-015
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -517,4 +520,94 @@ TEST-DP-012.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0087"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-013: FILE with zero amount -> E0031
+*> ---------------------------------------------------------------
+TEST-DP-013.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-013: FILE zero amount -> E0031"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000107 TO DSP-TXN-ID
+    MOVE 0.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0031"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0031"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-014: FILE with negative amount -> E0031
+*> ---------------------------------------------------------------
+TEST-DP-014.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-014: FILE negative amount -> E0031"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000108 TO DSP-TXN-ID
+    MOVE -100.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0031"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0031"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-015: PROV on closed account -> E0011
+*> ---------------------------------------------------------------
+TEST-DP-015.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-015: PROV closed account -> E0011"
+        TO WS-TEST-NAME
+    *> File a dispute first
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000109 TO DSP-TXN-ID
+    MOVE 200.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 1000.00 TO ACCT-LEDGER-BAL
+    MOVE 1000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now set account to closed and try PROV
+    MOVE "C" TO ACCT-STATUS
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0011"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0011"
     END-IF.

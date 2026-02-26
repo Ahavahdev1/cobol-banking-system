@@ -20,6 +20,9 @@ WORKING-STORAGE SECTION.
     05  WS-CDT-OFFSET-HOURS    PIC 9(2).
     05  WS-CDT-OFFSET-MINS     PIC 9(2).
 01  WS-TIMESTAMP              PIC 9(14).
+*> NOTE: WS-NEXT-AUDIT-ID resets to 1 on program restart.
+*> In production, persist the last-used ID to a file or
+*> database and reload it at startup to avoid duplicates.
 01  WS-NEXT-AUDIT-ID          PIC 9(15) VALUE 1.
 
 LINKAGE SECTION.
@@ -63,6 +66,12 @@ DO-WRITE-AUDIT.
     MOVE WS-NEXT-AUDIT-ID TO AUDIT-ID
     MOVE 1 TO AUDIT-SEQUENCE
     ADD 1 TO WS-NEXT-AUDIT-ID
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-AUDT-RESULT-CODE
+            MOVE "Audit ID overflow - maximum ID exceeded"
+                TO LS-AUDT-RESULT-MSG
+            EXIT PARAGRAPH
+    END-ADD
 
     MOVE "E0000" TO LS-AUDT-RESULT-CODE
     MOVE "Audit record written" TO LS-AUDT-RESULT-MSG.

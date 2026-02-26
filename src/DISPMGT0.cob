@@ -85,6 +85,13 @@ DO-FILE-DISPUTE.
         GOBACK
     END-IF
 
+    *> Validate dispute amount
+    IF DSP-TXN-AMOUNT NOT > 0
+        MOVE "E0031" TO LS-DSP-RESULT-CODE
+        MOVE "Invalid dispute amount" TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Set status to Pending
     MOVE "P" TO DSP-STATUS
 
@@ -106,6 +113,11 @@ DO-FILE-DISPUTE.
                           WS-DATE-INPUT
                           WS-DATE-OUTPUT
                           WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE NOT = "E0000"
+        MOVE WS-DATE-RESULT-CODE TO LS-DSP-RESULT-CODE
+        MOVE WS-DATE-RESULT-MSG TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
     MOVE WS-RESULT-DATE TO DSP-DEADLINE-DATE
 
     *> Assign dispute ID (auto-increment)
@@ -130,6 +142,20 @@ DO-PROVISIONAL-CREDIT.
     IF DSP-STATUS NOT = "P" AND DSP-STATUS NOT = "I"
         MOVE "E0086" TO LS-DSP-RESULT-CODE
         MOVE "Invalid dispute status for operation"
+            TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
+
+    *> Validate account is not closed or frozen
+    IF ACCT-STATUS = "C"
+        MOVE "E0011" TO LS-DSP-RESULT-CODE
+        MOVE "Account closed - cannot issue credit"
+            TO LS-DSP-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "F"
+        MOVE "E0012" TO LS-DSP-RESULT-CODE
+        MOVE "Account frozen - cannot issue credit"
             TO LS-DSP-RESULT-MSG
         GOBACK
     END-IF

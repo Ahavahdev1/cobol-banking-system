@@ -735,11 +735,11 @@ TEST-AR-012.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> AR-013: ACH with negative amount -> error E0095
+*> AR-013: ACH with negative amount -> error E0032
 *> ---------------------------------------------------------------
 TEST-AR-013.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "AR-013: ACH with negative amount -> E0095"
+    MOVE "AR-013: ACH with negative amount -> E0032"
         TO WS-TEST-NAME
     INITIALIZE WS-ACH-ENTRY
     INITIALIZE WS-ACCT-RECORD
@@ -772,22 +772,22 @@ TEST-AR-013.
                           WS-ACCT-RECORD
                           WS-ACH-RETURN-INFO
                           WS-ACH-RESULT
-    IF WS-ACH-RESULT-CODE = "E0095"
+    IF WS-ACH-RESULT-CODE = "E0032"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACH-RESULT-CODE
-            " expected=E0095"
+            " expected=E0032"
     END-IF.
 
 *> ---------------------------------------------------------------
-*> AR-014: ACH with zero amount -> error E0095
+*> AR-014: ACH with zero amount -> error E0031
 *> ---------------------------------------------------------------
 TEST-AR-014.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "AR-014: ACH with zero amount -> E0095"
+    MOVE "AR-014: ACH with zero amount -> E0031"
         TO WS-TEST-NAME
     INITIALIZE WS-ACH-ENTRY
     INITIALIZE WS-ACCT-RECORD
@@ -820,14 +820,14 @@ TEST-AR-014.
                           WS-ACCT-RECORD
                           WS-ACH-RETURN-INFO
                           WS-ACH-RESULT
-    IF WS-ACH-RESULT-CODE = "E0095"
+    IF WS-ACH-RESULT-CODE = "E0031"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACH-RESULT-CODE
-            " expected=E0095"
+            " expected=E0031"
     END-IF.
 
 *> ---------------------------------------------------------------

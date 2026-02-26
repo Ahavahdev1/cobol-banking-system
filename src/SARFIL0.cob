@@ -10,6 +10,9 @@ PROGRAM-ID. SARFIL0.
 
 DATA DIVISION.
 WORKING-STORAGE SECTION.
+*> NOTE: WS-NEXT-SAR-ID resets to 1 on program restart.
+*> In production, persist the last-used ID to a file or
+*> database and reload it at startup to avoid duplicates.
 01  WS-NEXT-SAR-ID            PIC 9(15) VALUE 1.
 01  WS-CURRENT-DATE-TIME.
     05  WS-CDT-YEAR            PIC 9(4).
@@ -86,6 +89,12 @@ DO-CREATE-SAR.
     *> Assign filing ID and stamp dates
     MOVE WS-NEXT-SAR-ID TO SAR-FILING-ID
     ADD 1 TO WS-NEXT-SAR-ID
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-SAR-RESULT-CODE
+            MOVE "SAR ID overflow - maximum ID exceeded"
+                TO LS-SAR-RESULT-MSG
+            EXIT PARAGRAPH
+    END-ADD
     MOVE WS-DATE-STAMP TO SAR-FILED-DATE
 
     *> Set status to Pending

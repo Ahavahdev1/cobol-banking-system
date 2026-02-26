@@ -42,7 +42,7 @@ MAIN-LOGIC.
     END-IF
 
     *> ATM and branch channels are exempt from Reg D limits
-    IF LS-RD-TXN-CHANNEL = "AT" OR "BR"
+    IF LS-RD-TXN-CHANNEL = "AT" OR LS-RD-TXN-CHANNEL = "BR"
         MOVE "E0000" TO LS-RD-RESULT-CODE
         MOVE "Channel exempt from Reg D limits"
             TO LS-RD-RESULT-MSG

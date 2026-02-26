@@ -9,6 +9,9 @@ PROGRAM-ID. CTRFIL0.
 
 DATA DIVISION.
 WORKING-STORAGE SECTION.
+*> NOTE: WS-NEXT-CTR-ID resets to 1 on program restart.
+*> In production, persist the last-used ID to a file or
+*> database and reload it at startup to avoid duplicates.
 01  WS-NEXT-CTR-ID            PIC 9(15) VALUE 1.
 01  WS-CURRENT-DATE-TIME.
     05  WS-CDT-YEAR            PIC 9(4).
@@ -88,6 +91,12 @@ DO-CREATE-CTR.
     *> Assign filing ID and stamp dates
     MOVE WS-NEXT-CTR-ID TO CTR-FILING-ID
     ADD 1 TO WS-NEXT-CTR-ID
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-CTR-RESULT-CODE
+            MOVE "CTR ID overflow - maximum ID exceeded"
+                TO LS-CTR-RESULT-MSG
+            EXIT PARAGRAPH
+    END-ADD
     MOVE WS-DATE-STAMP TO CTR-FILING-DATE
     MOVE WS-TIMESTAMP TO CTR-FILING-TIMESTAMP
 

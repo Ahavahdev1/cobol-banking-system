@@ -48,8 +48,8 @@ MAIN-LOGIC.
         GOBACK
     END-IF
 
-    *> Determine compounding periods from payment frequency
-    EVALUATE ACCT-INT-PAY-FREQ
+    *> Determine compounding periods from compounding frequency
+    EVALUATE ACCT-INT-COMPOUND-FREQ
         WHEN "D"
             MOVE 365 TO WS-PERIODS
         WHEN "M"
@@ -59,6 +59,8 @@ MAIN-LOGIC.
         WHEN "S"
             MOVE 2 TO WS-PERIODS
         WHEN "A"
+            MOVE 1 TO WS-PERIODS
+        WHEN "T"
             MOVE 1 TO WS-PERIODS
         WHEN OTHER
             MOVE "E0088" TO LS-APY-RESULT-CODE

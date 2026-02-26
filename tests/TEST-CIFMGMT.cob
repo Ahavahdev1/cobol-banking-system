@@ -46,6 +46,7 @@ MAIN-PROGRAM.
     PERFORM TEST-CF-014
     PERFORM TEST-CF-015
     PERFORM TEST-CF-016
+    PERFORM TEST-CF-017
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -297,6 +298,10 @@ TEST-CF-008.
         IF CIF-STATUS = "A"
             AND CIF-OPEN-DATE NOT = 0
             AND CIF-NUM-ACCOUNTS = 0
+            AND CIF-BSA-RISK-RATING = 1
+            AND CIF-OFAC-STATUS = "C"
+            AND CIF-CTR-EXEMPT = "N"
+            AND CIF-COUNTRY = "US"
             ADD 1 TO WS-PASS-COUNT
             DISPLAY "  PASS: " WS-TEST-NAME
         ELSE
@@ -305,6 +310,9 @@ TEST-CF-008.
                 " status=" CIF-STATUS
                 " open=" CIF-OPEN-DATE
                 " accts=" CIF-NUM-ACCOUNTS
+                " bsa=" CIF-BSA-RISK-RATING
+                " ofac=" CIF-OFAC-STATUS
+                " ctr=" CIF-CTR-EXEMPT
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
@@ -556,4 +564,35 @@ TEST-CF-016.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0000 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-017: VALD with zero DOB -> E0030
+*> ---------------------------------------------------------------
+TEST-CF-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-017: VALD zero DOB=E0030" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000017 TO CIF-CUST-ID
+    MOVE "NODOB" TO CIF-NAME-LAST
+    MOVE "TEST" TO CIF-NAME-FIRST
+    MOVE 555667777 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 0 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0030"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0030 actual=" WS-CIF-RESULT-CODE
     END-IF.
