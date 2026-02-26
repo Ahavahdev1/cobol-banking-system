@@ -41,6 +41,14 @@ MAIN-LOGIC.
     MOVE ZEROS TO LS-EFFECTIVE-RATE
     MOVE SPACES TO LS-APY-RESULT-MSG
 
+    *> Reject negative interest rates
+    IF ACCT-INT-RATE < 0
+        MOVE "E0102" TO LS-APY-RESULT-CODE
+        MOVE "Negative interest rate not supported"
+            TO LS-APY-RESULT-MSG
+        GOBACK
+    END-IF
+
     *> Zero rate: APY = 0, APR = 0, success
     IF ACCT-INT-RATE = 0
         MOVE "E0000" TO LS-APY-RESULT-CODE

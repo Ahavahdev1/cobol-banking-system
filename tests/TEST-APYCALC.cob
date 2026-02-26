@@ -47,6 +47,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AY-009
     PERFORM TEST-AY-010
     PERFORM TEST-AY-011
+    PERFORM TEST-AY-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -442,4 +443,29 @@ TEST-AY-011.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-APY-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AY-012: Invalid compounding frequency "X" -> E0088
+*> ---------------------------------------------------------------
+TEST-AY-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AY-012: Bad comp freq X -> E0088"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-APY-RESULT
+    MOVE 3.0000000 TO ACCT-INT-RATE
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "X" TO ACCT-INT-COMPOUND-FREQ
+    MOVE "M" TO ACCT-INT-PAY-FREQ
+    MOVE "D" TO ACCT-TYPE
+    MOVE "A" TO ACCT-STATUS
+    CALL "APYCALC0" USING ACCT-RECORD WS-APY-RESULT
+    IF WS-APY-RESULT-CODE = "E0088"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0088 actual=" WS-APY-RESULT-CODE
     END-IF.

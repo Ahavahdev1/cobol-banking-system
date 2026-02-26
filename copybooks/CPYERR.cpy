@@ -98,3 +98,7 @@
     05  ERR-WIRE-INVALID-REF      PIC X(5) VALUE "E0099".
     *> Dispute deadline errors
     05  ERR-DSP-DEADLINE-PASSED  PIC X(5) VALUE "E0100".
+    *> Additional CIF errors
+    05  ERR-CIF-INVALID-STATUS   PIC X(5) VALUE "E0101".
+    *> APY errors
+    05  ERR-APY-NEGATIVE-RATE    PIC X(5) VALUE "E0102".

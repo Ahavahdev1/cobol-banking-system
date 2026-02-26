@@ -115,6 +115,16 @@ VALIDATE-CIF.
         EXIT PARAGRAPH
     END-IF
 
+    IF CIF-STATUS NOT = "A"
+        AND CIF-STATUS NOT = "I"
+        AND CIF-STATUS NOT = "C"
+        AND CIF-STATUS NOT = "D"
+        AND CIF-STATUS NOT = "F"
+        MOVE "E0101" TO LS-CIF-RESULT-CODE
+        MOVE "Invalid CIF status" TO LS-CIF-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     MOVE "E0000" TO LS-CIF-RESULT-CODE
     MOVE "CIF validation successful" TO LS-CIF-RESULT-MSG.
 

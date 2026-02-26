@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-CF-016
     PERFORM TEST-CF-017
     PERFORM TEST-CF-018
+    PERFORM TEST-CF-019
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -643,4 +644,35 @@ TEST-CF-018.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-019: VALD with invalid CIF status "X" -> E0101
+*> ---------------------------------------------------------------
+TEST-CF-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-019: VALD bad CIF status=E0101" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000019 TO CIF-CUST-ID
+    MOVE "BADSTAT" TO CIF-NAME-LAST
+    MOVE "TEST" TO CIF-NAME-FIRST
+    MOVE 778899001 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19850615 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "X" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0101"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0101 actual=" WS-CIF-RESULT-CODE
     END-IF.
