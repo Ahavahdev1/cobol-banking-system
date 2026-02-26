@@ -54,6 +54,10 @@ MAIN-PROGRAM.
     PERFORM TEST-DU-019
     PERFORM TEST-DU-020
     PERFORM TEST-DU-021
+    PERFORM TEST-DU-022
+    PERFORM TEST-DU-023
+    PERFORM TEST-DU-024
+    PERFORM TEST-DU-025
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -664,4 +668,109 @@ TEST-DU-021.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-DATE-RESULT-CODE
             " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-022: BDAY negative days -> E0002
+*> ---------------------------------------------------------------
+TEST-DU-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-022: BDAY negative days -> E0002" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20260301 TO WS-DATE1
+    MOVE -3 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0002"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DATE-RESULT-CODE
+            " expected=E0002"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-023: BDAY Feb 28 non-leap + 1 bday = Mar 2 2025
+*> Feb 28 (Fri) + 1 bday = Mar 3 (Mon)
+*> ---------------------------------------------------------------
+TEST-DU-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-023: BDAY Feb28 non-leap +1" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20250228 TO WS-DATE1
+    MOVE +1 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    *> Feb 28 2025 is Friday; +1 bday = Monday Mar 3
+    IF WS-DATE-RESULT-CODE = "E0000"
+        AND WS-RESULT-DATE = 20250303
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " date=" WS-RESULT-DATE
+            " expected=20250303"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-024: BDAY Feb 28 leap + 1 bday = Mar 1 (Feb 29 is Sat)
+*> 2028 is leap: Feb 28 Mon + 1 bday = Feb 29 Tue
+*> ---------------------------------------------------------------
+TEST-DU-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-024: BDAY Feb28 leap +1" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20280228 TO WS-DATE1
+    MOVE +1 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    *> Feb 28 2028 is Monday; +1 bday = Feb 29 Tuesday (leap)
+    IF WS-DATE-RESULT-CODE = "E0000"
+        AND WS-RESULT-DATE = 20280229
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " date=" WS-RESULT-DATE
+            " expected=20280229"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-025: BDAY Feb 29 leap + 1 bday = Mar 1
+*> 2028: Feb 29 Tue + 1 bday = Mar 1 Wed
+*> ---------------------------------------------------------------
+TEST-DU-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-025: BDAY Feb29 leap +1" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20280229 TO WS-DATE1
+    MOVE +1 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    *> Feb 29 2028 is Tuesday; +1 bday = Mar 1 Wednesday
+    IF WS-DATE-RESULT-CODE = "E0000"
+        AND WS-RESULT-DATE = 20280301
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " date=" WS-RESULT-DATE
+            " expected=20280301"
     END-IF.

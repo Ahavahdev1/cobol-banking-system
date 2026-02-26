@@ -101,7 +101,7 @@ POST-GL-ENTRY.
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on GL balance"
                             TO LS-GL-RESULT-MSG
-                        EXIT PARAGRAPH
+                        GOBACK
                 END-SUBTRACT
                 MOVE GL-MTD-CREDITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
@@ -130,7 +130,7 @@ POST-GL-ENTRY.
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on GL balance"
                             TO LS-GL-RESULT-MSG
-                        EXIT PARAGRAPH
+                        GOBACK
                 END-ADD
                 MOVE GL-MTD-DEBITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
@@ -162,7 +162,7 @@ POST-GL-ENTRY.
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on GL balance"
                             TO LS-GL-RESULT-MSG
-                        EXIT PARAGRAPH
+                        GOBACK
                 END-SUBTRACT
                 MOVE GL-MTD-DEBITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
@@ -191,7 +191,7 @@ POST-GL-ENTRY.
                         MOVE "E0040" TO LS-GL-RESULT-CODE
                         MOVE "Arithmetic overflow on GL balance"
                             TO LS-GL-RESULT-MSG
-                        EXIT PARAGRAPH
+                        GOBACK
                 END-ADD
                 MOVE GL-MTD-CREDITS TO WS-SAVE-GL-MTD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS

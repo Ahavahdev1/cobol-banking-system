@@ -35,6 +35,20 @@ MAIN-LOGIC.
         GOBACK
     END-IF
 
+    *> Reject closed and escheated accounts (no fee assessment)
+    IF ACCT-STATUS = "C"
+        MOVE "E0011" TO LS-FEE-RESULT-CODE
+        MOVE "Account closed - fee not assessed"
+            TO LS-FEE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0044" TO LS-FEE-RESULT-CODE
+        MOVE "Account escheated - fee not assessed"
+            TO LS-FEE-RESULT-MSG
+        GOBACK
+    END-IF
+
     EVALUATE FEE-TYPE
         WHEN "MTH"
             PERFORM PROCESS-MONTHLY-FEE THRU

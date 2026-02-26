@@ -53,6 +53,9 @@ MAIN-PROGRAM.
     PERFORM TEST-FE-017
     PERFORM TEST-FE-018
     PERFORM TEST-FE-019
+    PERFORM TEST-FE-020
+    PERFORM TEST-FE-021
+    PERFORM TEST-FE-022
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -847,4 +850,97 @@ TEST-FE-019.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-FEE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-020: Closed account -> E0011 (no fee assessed)
+*> ---------------------------------------------------------------
+TEST-FE-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-020: Closed account -> E0011" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE "C" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "N" TO FEE-WAIVER-ELIGIBLE
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0011"
+        AND WS-FEE-ASSESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+            " fee=" WS-FEE-ASSESSED
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-021: Escheated account -> E0044 (no fee assessed)
+*> ---------------------------------------------------------------
+TEST-FE-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-021: Escheated account -> E0044" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE "E" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE 12.00 TO FEE-AMOUNT
+    MOVE "N" TO FEE-WAIVER-ELIGIBLE
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0044"
+        AND WS-FEE-ASSESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+            " fee=" WS-FEE-ASSESSED
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> FE-022: NSF on closed account -> E0011 (no fee assessed)
+*> ---------------------------------------------------------------
+TEST-FE-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "FE-022: NSF closed account -> E0011" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE FEE-SCHEDULE-RECORD
+    INITIALIZE WS-FEE-RESULT
+    MOVE -100.00 TO ACCT-LEDGER-BAL
+    MOVE "C" TO ACCT-STATUS
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE "DDA1" TO FEE-PRODUCT-CODE
+    MOVE "NSF" TO FEE-TYPE
+    MOVE 36.00 TO FEE-AMOUNT
+    MOVE "N" TO FEE-WAIVER-ELIGIBLE
+    MOVE 04 TO FEE-NSF-DAILY-MAX
+    MOVE 5.00 TO FEE-NSF-DE-MINIMIS
+    MOVE "A" TO FEE-STATUS
+    CALL "FEECALC0" USING ACCT-RECORD FEE-SCHEDULE-RECORD
+                          WS-FEE-RESULT
+    IF WS-FEE-RESULT-CODE = "E0011"
+        AND WS-FEE-ASSESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-FEE-RESULT-CODE
+            " fee=" WS-FEE-ASSESSED
     END-IF.

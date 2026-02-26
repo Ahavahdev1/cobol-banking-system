@@ -127,6 +127,13 @@ MAIN-LOGIC.
 *> BDAY - Add business days to a date
 *> ================================================================
 DO-BDAY.
+    IF LS-DAYS-TO-ADD < 0
+        MOVE "E0002" TO LS-DATE-RESULT-CODE
+        MOVE "Negative business days not supported"
+            TO LS-DATE-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     MOVE LS-DATE1 TO WS-BDAY-CURRENT-DATE
     MOVE LS-DAYS-TO-ADD TO WS-BDAY-REMAINING
 
