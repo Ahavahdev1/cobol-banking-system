@@ -47,6 +47,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-017
     PERFORM TEST-DP-018
     PERFORM TEST-DP-019
+    PERFORM TEST-DP-020
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -762,4 +763,42 @@ TEST-DP-019.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-020: PROV on closed account -> E0011
+*> File dispute first, then close account, call PROV
+*> ---------------------------------------------------------------
+TEST-DP-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-020: PROV closed account -> E0011"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000113 TO DSP-TXN-ID
+    MOVE 250.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 1000.00 TO ACCT-LEDGER-BAL
+    MOVE 1000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now set account to closed and try PROV
+    MOVE "C" TO ACCT-STATUS
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0011"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0011"
     END-IF.
