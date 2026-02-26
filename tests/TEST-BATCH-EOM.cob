@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOM.
 *> ================================================================
 *> TEST-BATCH-EOM - Integration test for EOMPROC0 End-of-Month
 *> Tests: EOM cycle with fee assessment, MTD reset, batch status,
-*>        closed-account skip, statement dates, YTD reset (19 tests)
+*>        closed-account skip, statement dates, YTD reset (21 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -49,6 +49,8 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-017
     PERFORM TEST-EM-018
     PERFORM TEST-EM-019
+    PERFORM TEST-EM-020
+    PERFORM TEST-EM-021
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -727,6 +729,92 @@ TEST-EM-019.
                 " nsf-mtd=" ACCT-NSF-COUNT-MTD
                 " bal=" ACCT-LEDGER-BAL
                 " fees=" BATCH-FEES-ASSESSED
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-020: Frozen account + January batch = YTD reset, no fee
+*> Combines frozen-account fee skip with January YTD reset.
+*> Verifies YTD counters zeroed AND no fee charged.
+*> ---------------------------------------------------------------
+TEST-EM-020.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-020: Frozen + January YTD reset"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    MOVE "F" TO ACCT-STATUS
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    *> Set prior-year YTD counters that should be reset
+    MOVE 3 TO ACCT-NSF-COUNT-YTD
+    MOVE 50.00 TO ACCT-YTD-FEES-CHARGED
+    MOVE 25.00 TO ACCT-YTD-FEES-WAIVED
+    MOVE 200.00 TO ACCT-YTD-INT-EARNED
+    MOVE 150.00 TO ACCT-YTD-INT-PAID
+    MOVE ACCT-LEDGER-BAL TO WS-SAVED-LEDGER-BAL
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260131 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-NSF-COUNT-YTD = 0
+            AND ACCT-YTD-FEES-CHARGED = 0
+            AND ACCT-YTD-INT-EARNED = 0
+            AND ACCT-LEDGER-BAL = WS-SAVED-LEDGER-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " ytd-nsf=" ACCT-NSF-COUNT-YTD
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ytd-nsf=" ACCT-NSF-COUNT-YTD
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " ytd-earned=" ACCT-YTD-INT-EARNED
+                " bal=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-021: Statement date March 31 -> April 30 (30-day month cap)
+*> Tests the EVALUATE WHEN 4 path in EOM-UPDATE-STMT-DATES
+*> ---------------------------------------------------------------
+TEST-EM-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-021: Stmt date Mar31 -> Apr30"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    MOVE 20260331 TO ACCT-LAST-STMT-DATE
+    MOVE 0.00 TO ACCT-MONTHLY-FEE
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260331 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-NEXT-STMT-DATE = 20260430
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " next-stmt=" ACCT-NEXT-STMT-DATE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=20260430 actual="
+                ACCT-NEXT-STMT-DATE
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

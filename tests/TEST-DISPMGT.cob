@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (25 tests)
+*> Tests: File, provisional credit, resolve, inquiry (26 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -53,6 +53,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-023
     PERFORM TEST-DP-024
     PERFORM TEST-DP-025
+    PERFORM TEST-DP-026
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1012,4 +1013,61 @@ TEST-DP-025.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE " expected=E0100"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-026: RSLV partial where partial amount = provisional amount
+*> Boundary: when DSP-TXN-AMOUNT = DSP-PROVISIONAL-AMT, no reversal
+*> is needed. Balance should be unchanged from post-provisional state.
+*> ---------------------------------------------------------------
+TEST-DP-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-026: Partial = provisional, no reversal"
+        TO WS-TEST-NAME
+    *> File dispute for $500
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000003 TO DSP-ACCT-NUMBER
+    MOVE 000000000000200 TO DSP-TXN-ID
+    MOVE 500.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000003 TO ACCT-NUMBER
+    MOVE 5000.00 TO ACCT-LEDGER-BAL
+    MOVE 5000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    MOVE "A" TO ACCT-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Issue provisional credit (bal becomes 5500)
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Partially approve for $500 (= provisional, no reversal needed)
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "PA" TO DSP-RESOLUTION-CODE
+    MOVE 500.00 TO DSP-TXN-AMOUNT
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Balance should remain 5500 (no reversal)
+    IF WS-DSP-RESULT-CODE = "E0000"
+        IF DSP-STATUS = "R"
+            AND ACCT-LEDGER-BAL = 5500.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " status=" DSP-STATUS
+                " bal=" ACCT-LEDGER-BAL
+                " expected=5500.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE
     END-IF.

@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account, error paths (20 tests)
+*>        batch status, multi-account, error paths (21 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-018
     PERFORM TEST-BE-019
     PERFORM TEST-BE-020
+    PERFORM TEST-BE-021
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -741,4 +742,48 @@ TEST-BE-020.
             " ytd-earned=" ACCT-YTD-INT-EARNED
             " ytd-paid=" ACCT-YTD-INT-PAID
             " accrued=" ACCT-ACCRUED-INT
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-021: Semi-annual payment frequency crossing year boundary
+*> Pay date = Aug 31 2026, batch = Aug 31 -> next pay = Feb 28 2027
+*> Exercises the "S" (6-month) ADVANCE-NEXT-PAY-DATE path with
+*> month rollover (8+6=14 -> 2) and day capping (31 -> 28 Feb).
+*> ---------------------------------------------------------------
+TEST-BE-021.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-021: Semi-annual freq year crossing"
+        TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "S" TO ACCT-INT-PAY-FREQ
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 50.000000 TO ACCT-ACCRUED-INT
+    *> Payment due today (Aug 31)
+    MOVE 20260831 TO ACCT-INT-NEXT-PAY-DATE
+    MOVE 0 TO ACCT-YTD-INT-EARNED
+    MOVE 0 TO ACCT-YTD-INT-PAID
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260831 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> Next pay date should be 20270228 (Feb 28 2027, non-leap)
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-INT-NEXT-PAY-DATE = 20270228
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " next-pay=" ACCT-INT-NEXT-PAY-DATE
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=20270228 actual="
+                ACCT-INT-NEXT-PAY-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
     END-IF.

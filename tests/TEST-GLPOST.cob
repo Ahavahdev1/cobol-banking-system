@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL, INIT, CRPT functions (25 tests)
+*> Tests: POST, TBAL, INIT, CRPT functions (26 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -94,6 +94,7 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-023
     PERFORM TEST-GL-024
     PERFORM TEST-GL-025
+    PERFORM TEST-GL-026
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1025,4 +1026,54 @@ TEST-GL-025.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-026: YTD overflow rollback preserves balance and MTD
+*> When YTD accumulator overflows, both GL-CURRENT-BAL and MTD
+*> must be restored to pre-POST values.
+*> ---------------------------------------------------------------
+TEST-GL-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-026: YTD overflow rolls back bal+MTD"
+        TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 2010 TO WS-GLE-CR-ACCT
+    MOVE 100.00 TO WS-GLE-AMOUNT
+    MOVE "YTD overflow test" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    *> Set up debit-normal GL account on DR side
+    MOVE 1010 TO GL-ACCOUNT-NUM
+    MOVE 1000 TO GL-COST-CENTER
+    MOVE "A" TO GL-STATUS
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "D" TO GL-NORMAL-BALANCE
+    MOVE 5000.00 TO GL-CURRENT-BAL
+    MOVE 200.00 TO GL-MTD-DEBITS
+    *> Set YTD-DEBITS near max so $100 causes overflow
+    MOVE 999999999999999.99 TO GL-YTD-DEBITS
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    *> Should get E0040 and both BAL + MTD should be rolled back
+    IF WS-GL-RESULT-CODE = "E0040"
+        IF GL-CURRENT-BAL = 5000.00
+            AND GL-MTD-DEBITS = 200.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " bal=" GL-CURRENT-BAL " mtd=" GL-MTD-DEBITS
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" GL-CURRENT-BAL " (expected 5000)"
+                " mtd=" GL-MTD-DEBITS " (expected 200)"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-GL-RESULT-CODE " expected=E0040"
     END-IF.
