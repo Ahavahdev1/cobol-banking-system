@@ -216,12 +216,13 @@ TEST-EM-005.
 
 *> ---------------------------------------------------------------
 *> EM-006: MTD counters reset after EOM processing
-*> ACCT-NSF-COUNT-MTD, ACCT-MTD-AVG-BAL, ACCT-MTD-LOW-BAL
-*> should all be zero after EOMPROC0 runs
+*> ACCT-NSF-COUNT-MTD, ACCT-MTD-AVG-BAL reset to zero.
+*> ACCT-MTD-LOW-BAL resets to current ledger balance (new month
+*> watermark starts at today's balance, not zero).
 *> ---------------------------------------------------------------
 TEST-EM-006.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "EM-006: MTD counters reset to zero" TO WS-TEST-NAME
+    MOVE "EM-006: MTD counters reset correctly" TO WS-TEST-NAME
     PERFORM SETUP-EOM-ACCOUNT
     INITIALIZE BATCH-RECORD
     INITIALIZE WS-BATCH-RESULT
@@ -232,7 +233,7 @@ TEST-EM-006.
                           WS-BATCH-RESULT
     IF ACCT-NSF-COUNT-MTD = 0
         AND ACCT-MTD-AVG-BAL = 0
-        AND ACCT-MTD-LOW-BAL = 0
+        AND ACCT-MTD-LOW-BAL = ACCT-LEDGER-BAL
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE

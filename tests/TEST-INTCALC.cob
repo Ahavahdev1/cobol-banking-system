@@ -64,6 +64,7 @@ MAIN-PROGRAM.
     PERFORM TEST-IC-025
     PERFORM TEST-IC-026
     PERFORM TEST-IC-027
+    PERFORM TEST-IC-028
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1053,7 +1054,45 @@ TEST-IC-027.
         ELSE
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
-                " payment-due=N expected=Y"
+                " payment-due=N expected=Y (IC-027)"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-INT-RESULT-CODE " (IC-027)"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> IC-028: PTD-INT-EARNED accumulates daily interest
+*> After one accrual day, ACCT-PTD-INT-EARNED should equal
+*> the daily interest amount (started at 0).
+*> ---------------------------------------------------------------
+TEST-IC-028.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "IC-028: PTD-INT-EARNED accumulates daily int"
+        TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-INT-RESULT
+    MOVE 10000.00 TO ACCT-LEDGER-BAL
+    MOVE 10000.00 TO ACCT-AVAIL-BAL
+    MOVE 5.0000000 TO ACCT-INT-RATE
+    MOVE "A" TO ACCT-INT-ACCRUAL-BASIS
+    MOVE "DB" TO ACCT-INT-CALC-METHOD
+    MOVE "F" TO ACCT-INT-RATE-TYPE
+    MOVE "A" TO ACCT-STATUS
+    MOVE 0 TO ACCT-PTD-INT-EARNED
+    MOVE 20260315 TO WS-CALC-DATE
+    CALL "INTCALC0" USING ACCT-RECORD WS-CALC-DATE WS-INT-RESULT
+    IF WS-INT-RESULT-CODE = "E0000"
+        IF ACCT-PTD-INT-EARNED = WS-DAILY-INT-AMT
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " ptd=" ACCT-PTD-INT-EARNED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ptd=" ACCT-PTD-INT-EARNED
+                " expected=" WS-DAILY-INT-AMT
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

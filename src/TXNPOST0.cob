@@ -42,6 +42,7 @@ MAIN-LOGIC.
     PERFORM POST-TRANSACTION
     PERFORM UPDATE-AVAILABLE-BALANCE
     PERFORM CAPTURE-AFTER-SNAPSHOT
+    PERFORM UPDATE-MTD-LOW-BAL
     PERFORM MAP-GL-ENTRIES
     PERFORM CHECK-CTR
     MOVE TXN-POST-DATE TO ACCT-LAST-TXN-DATE
@@ -109,6 +110,14 @@ VALIDATE-ACCOUNT-STATUS.
     IF ACCT-DECEASED = "Y"
         MOVE "E0036" TO LS-TXN-RESULT-CODE
         MOVE "Account holder is deceased" TO LS-TXN-RESULT-MSG
+        GOBACK
+    END-IF
+    *> Dormant accounts may receive credits (deposits, interest)
+    *> but debits require reactivation to prevent unauthorized outflows.
+    IF ACCT-STATUS = "D" AND TXN-DR-CR = "D"
+        MOVE "E0013" TO LS-TXN-RESULT-CODE
+        MOVE "Account is dormant - debits not permitted"
+            TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF.
 
@@ -220,6 +229,16 @@ UPDATE-AVAILABLE-BALANCE.
 CAPTURE-AFTER-SNAPSHOT.
     MOVE ACCT-LEDGER-BAL TO TXN-BAL-AFTER
     MOVE ACCT-AVAIL-BAL TO TXN-AVAIL-AFTER.
+
+*> ---------------------------------------------------------------
+*> Track month-to-date low balance watermark
+*> Updates ACCT-MTD-LOW-BAL if the new ledger balance is the
+*> lowest seen this month (reset monthly by EOMPROC0).
+*> ---------------------------------------------------------------
+UPDATE-MTD-LOW-BAL.
+    IF ACCT-LEDGER-BAL < ACCT-MTD-LOW-BAL
+        MOVE ACCT-LEDGER-BAL TO ACCT-MTD-LOW-BAL
+    END-IF.
 
 *> ---------------------------------------------------------------
 *> Map GL entries based on transaction type and account sub-type

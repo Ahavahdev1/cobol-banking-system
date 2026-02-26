@@ -70,6 +70,9 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-037
     PERFORM TEST-TP-038
     PERFORM TEST-TP-039
+    PERFORM TEST-TP-040
+    PERFORM TEST-TP-041
+    PERFORM TEST-TP-042
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1314,6 +1317,95 @@ TEST-TP-039.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " penalty=" TXN-CD-PENALTY-AMT
                 " expected=123.29"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000 (TP-039)"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-040: Dormant account debit rejected with E0013
+*> Dormant accounts should not allow withdrawals/debits
+*> ---------------------------------------------------------------
+TEST-TP-040.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-040: Dormant acct debit -> E0013" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "D" TO ACCT-STATUS
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 100.00 TO TXN-AMOUNT
+    MOVE 0 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0013"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0013"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-041: Dormant account credit (deposit) allowed
+*> Credits to dormant accounts should succeed (reactivation path)
+*> ---------------------------------------------------------------
+TEST-TP-041.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-041: Dormant acct credit -> E0000" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "D" TO ACCT-STATUS
+    MOVE 1000.00 TO ACCT-MTD-LOW-BAL
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 200.00 TO TXN-AMOUNT
+    MOVE 200.00 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+            " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-042: MTD low balance tracked after withdrawal
+*> After a withdrawal that lowers balance below previous low,
+*> ACCT-MTD-LOW-BAL should update to new low
+*> ---------------------------------------------------------------
+TEST-TP-042.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-042: MTD low bal tracks after WDL" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    *> Starting balance 1000, MTD low = 1000 (start of month)
+    MOVE 1000.00 TO ACCT-MTD-LOW-BAL
+    PERFORM SETUP-WITHDRAWAL-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 300.00 TO TXN-AMOUNT
+    MOVE 0 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF ACCT-MTD-LOW-BAL = 700.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " low=" ACCT-MTD-LOW-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " low=" ACCT-MTD-LOW-BAL
+                " expected=700.00"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

@@ -120,6 +120,16 @@ MAIN-LOGIC.
             GOBACK
     END-ADD
 
+    *> Accumulate daily interest into PTD (period-to-date) earned.
+    *> Tracks interest since last statement; reset by EOMPROC0.
+    ADD WS-DAILY-INTEREST TO ACCT-PTD-INT-EARNED
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-INT-RESULT-CODE
+            MOVE "Arithmetic overflow on PTD interest earned"
+                TO LS-INT-RESULT-MSG
+            GOBACK
+    END-ADD
+
     *> Check if payment is due
     MOVE "N" TO WS-PAYMENT-FLAG
     IF ACCT-INT-NEXT-PAY-DATE > 0

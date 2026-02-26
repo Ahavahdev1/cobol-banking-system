@@ -208,7 +208,10 @@ EOM-RESET-MTD.
     MOVE 0 TO ACCT-NSF-COUNT-TODAY
     MOVE 0 TO ACCT-OL-TXN-COUNT-MTD
     MOVE 0 TO ACCT-MTD-AVG-BAL
-    MOVE 0 TO ACCT-MTD-LOW-BAL.
+    *> Reset low-balance watermark to current balance so the new
+    *> month starts tracking from here (not zero, which would make
+    *> every subsequent comparison fail to detect real low points).
+    MOVE ACCT-LEDGER-BAL TO ACCT-MTD-LOW-BAL.
 
 *> ---------------------------------------------------------------
 *> Log EOM processing to audit trail
@@ -232,6 +235,8 @@ EOM-LOG-AUDIT.
 *> Update statement date fields on account record
 *> ---------------------------------------------------------------
 EOM-UPDATE-STMT-DATES.
+    *> Reset period-to-date interest for new statement cycle
+    MOVE 0 TO ACCT-PTD-INT-EARNED
     MOVE LS-BATCH-DATE TO ACCT-LAST-STMT-DATE
     *> Set next statement date to 1 month later with rollover
     MOVE LS-BATCH-DATE TO WS-NEXT-STMT-DATE
