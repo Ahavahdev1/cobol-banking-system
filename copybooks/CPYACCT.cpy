@@ -54,6 +54,9 @@
         *> M = Monthly, Q = Quarterly, S = Semi,
         *> A = Annual, T = At Maturity
         10  ACCT-INT-NEXT-PAY-DATE PIC 9(8).
+    05  ACCT-TRANSFER-COUNTS.
+        10  ACCT-OL-TXN-COUNT-MTD PIC 9(3).
+        *> Monthly electronic transfer count for Reg D
     05  ACCT-OVERDRAFT-INFO.
         10  ACCT-OD-PROTECTION     PIC X(1).
         *> N = None, T = Transfer, L = Line of Credit

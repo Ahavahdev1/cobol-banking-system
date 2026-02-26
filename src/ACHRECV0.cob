@@ -10,6 +10,25 @@ WORKING-STORAGE SECTION.
 01  WS-IS-CREDIT           PIC X(1).
 01  WS-IS-DEBIT            PIC X(1).
 
+*> Reg D check linkage areas
+01  WS-REGD-REQUEST.
+    05  WS-RD-TXN-CHANNEL  PIC X(2).
+    05  WS-RD-TXN-TYPE     PIC X(3).
+    05  WS-RD-CURRENT-COUNT PIC 9(3).
+01  WS-REGD-RESULT.
+    05  WS-RD-RESULT-CODE  PIC X(5).
+    05  WS-RD-RESULT-MSG   PIC X(50).
+    05  WS-RD-ALLOWED      PIC X(1).
+    05  WS-RD-NEW-COUNT    PIC 9(3).
+    05  WS-RD-LIMIT-REACHED PIC X(1).
+
+*> Audit trail linkage areas
+01  WS-AUDIT-FUNCTION      PIC X(4).
+COPY CPYAUDT.
+01  WS-AUDIT-RESULT.
+    05  WS-AUDT-RESULT-CODE  PIC X(5).
+    05  WS-AUDT-RESULT-MSG   PIC X(50).
+
 LINKAGE SECTION.
 01  LS-ACH-ENTRY.
     05  LS-ACH-RECORD-TYPE       PIC X(1).
@@ -31,7 +50,7 @@ COPY CPYACCT.
 01  LS-ACH-RETURN-INFO.
     05  LS-ACH-RETURN-CODE       PIC X(3).
     *> R01 = NSF, R02 = Closed, R03 = No Account,
-    *> R08 = Stop Payment
+    *> R08 = Stop Payment, R09 = Reg D violation
     05  LS-ACH-RETURN-REASON     PIC X(30).
     05  LS-ACH-RETURN-FLAG       PIC X(1).
 01  LS-ACH-RESULT.
@@ -60,19 +79,25 @@ MAIN-PROCESS.
         MOVE "Y" TO WS-IS-DEBIT
     END-IF
 
-    *> Step 1: Batch control validation
+    *> Step 1: Validate ACH amount
+    PERFORM VALIDATE-AMOUNT
+    IF LS-ACH-RESULT-CODE NOT = "E0000"
+        GOBACK
+    END-IF
+
+    *> Step 2: Batch control validation
     PERFORM CHECK-BATCH-TOTALS
     IF LS-ACH-RESULT-CODE NOT = "E0000"
         GOBACK
     END-IF
 
-    *> Step 2: Account validation
+    *> Step 3: Account validation
     PERFORM CHECK-ACCOUNT
     IF LS-ACH-RETURN-FLAG = "Y"
         GOBACK
     END-IF
 
-    *> Step 3: Funds check for debits
+    *> Step 4: Funds check for debits
     IF WS-IS-DEBIT = "Y"
         PERFORM CHECK-FUNDS
         IF LS-ACH-RETURN-FLAG = "Y"
@@ -80,8 +105,21 @@ MAIN-PROCESS.
         END-IF
     END-IF
 
-    *> Step 4: Process the transaction
+    *> Step 5: Reg D check for debits from savings/MMA
+    IF WS-IS-DEBIT = "Y"
+        IF ACCT-SUB-TYPE = "SV" OR ACCT-SUB-TYPE = "MM"
+            PERFORM CHECK-REG-D
+            IF LS-ACH-RETURN-FLAG = "Y"
+                GOBACK
+            END-IF
+        END-IF
+    END-IF
+
+    *> Step 6: Process the transaction
     PERFORM PROCESS-TRANSACTION
+
+    *> Step 7: Write audit trail for successful transaction
+    PERFORM WRITE-AUDIT-TRAIL
     GOBACK.
 
 *> ---------------------------------------------------------------
@@ -149,6 +187,55 @@ PROCESS-TRANSACTION.
     IF WS-IS-DEBIT = "Y"
         SUBTRACT LS-ACH-AMOUNT FROM ACCT-LEDGER-BAL
     END-IF
+    *> Bug fix: Update available balance to mirror TXNPOST0
+    COMPUTE ACCT-AVAIL-BAL =
+        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
     MOVE "N" TO LS-ACH-RETURN-FLAG
     MOVE "E0000" TO LS-ACH-RESULT-CODE
     MOVE "ACH TRANSACTION PROCESSED" TO LS-ACH-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> VALIDATE-AMOUNT - Ensure ACH amount is positive
+*> ---------------------------------------------------------------
+VALIDATE-AMOUNT.
+    IF LS-ACH-AMOUNT <= 0
+        MOVE "E0095" TO LS-ACH-RESULT-CODE
+        MOVE "INVALID ACH AMOUNT" TO LS-ACH-RESULT-MSG
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CHECK-REG-D - Regulation D transfer limit for savings/MMA
+*> ---------------------------------------------------------------
+CHECK-REG-D.
+    INITIALIZE WS-REGD-REQUEST
+    INITIALIZE WS-REGD-RESULT
+    MOVE "AC" TO WS-RD-TXN-CHANNEL
+    MOVE "ACH" TO WS-RD-TXN-TYPE
+    MOVE ACCT-OL-TXN-COUNT-MTD TO WS-RD-CURRENT-COUNT
+    CALL "REGDCHK0" USING ACCT-RECORD
+                          WS-REGD-REQUEST
+                          WS-REGD-RESULT
+    IF WS-RD-ALLOWED = "N"
+        MOVE "Y" TO LS-ACH-RETURN-FLAG
+        MOVE "R09" TO LS-ACH-RETURN-CODE
+        MOVE "REG D TRANSFER LIMIT EXCEEDED"
+            TO LS-ACH-RETURN-REASON
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> WRITE-AUDIT-TRAIL - Log successful ACH transaction
+*> ---------------------------------------------------------------
+WRITE-AUDIT-TRAIL.
+    INITIALIZE AUDIT-RECORD
+    INITIALIZE WS-AUDIT-RESULT
+    MOVE "WRIT" TO WS-AUDIT-FUNCTION
+    MOVE "SYSTEM" TO AUDIT-USER-ID
+    MOVE "ACHRECV0" TO AUDIT-PROGRAM-ID
+    MOVE "ACH " TO AUDIT-FUNCTION
+    MOVE "ACCT" TO AUDIT-ENTITY-TYPE
+    MOVE ACCT-NUMBER TO AUDIT-ENTITY-KEY
+    MOVE "ACH transaction processed"
+        TO AUDIT-DESCRIPTION
+    CALL "AUDTLOG0" USING WS-AUDIT-FUNCTION
+                          AUDIT-RECORD
+                          WS-AUDIT-RESULT.

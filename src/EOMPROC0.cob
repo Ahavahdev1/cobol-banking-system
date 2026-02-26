@@ -118,6 +118,15 @@ PROCESS-EOM-ACCOUNT.
 *> ---------------------------------------------------------------
 EOM-ASSESS-FEE.
     INITIALIZE WS-FEE-RESULT
+    *> Set up fee schedule from account product info
+    INITIALIZE FEE-SCHEDULE-RECORD
+    MOVE ACCT-PRODUCT-CODE TO FEE-PRODUCT-CODE
+    MOVE "MTH" TO FEE-TYPE
+    MOVE ACCT-MONTHLY-FEE TO FEE-AMOUNT
+    MOVE "Monthly maintenance fee" TO FEE-DESCRIPTION
+    MOVE "Y" TO FEE-WAIVER-ELIGIBLE
+    MOVE ACCT-FEE-WAIVER-AMT TO FEE-MIN-BAL-THRESHOLD
+    MOVE "A" TO FEE-STATUS
     CALL "FEECALC0" USING ACCT-RECORD
                           FEE-SCHEDULE-RECORD
                           WS-FEE-RESULT

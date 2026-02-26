@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-CIFMGMT.
 *> ================================================================
 *> TEST-CIFMGMT - Test suite for CIFMGMT CIF management
-*> Tests: VALD, INIT functions (10 tests)
+*> Tests: VALD, INIT functions (12 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -40,6 +40,8 @@ MAIN-PROGRAM.
     PERFORM TEST-CF-008
     PERFORM TEST-CF-009
     PERFORM TEST-CF-010
+    PERFORM TEST-CF-011
+    PERFORM TEST-CF-012
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -369,4 +371,69 @@ TEST-CF-010.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0000 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-011: VALD customer under 18 -> E0029
+*> ---------------------------------------------------------------
+TEST-CF-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-011: VALD underage=E0029" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000011 TO CIF-CUST-ID
+    MOVE "YOUNG" TO CIF-NAME-LAST
+    MOVE "MINOR" TO CIF-NAME-FIRST
+    MOVE 888990000 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 20090101 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0029"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0029 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-012: VALD expired CIP document -> E0084
+*> ---------------------------------------------------------------
+TEST-CF-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-012: VALD CIP expired=E0084" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "VALD" TO WS-FUNCTION
+    MOVE 1000000012 TO CIF-CUST-ID
+    MOVE "EXPIRED" TO CIF-NAME-LAST
+    MOVE "DOC" TO CIF-NAME-FIRST
+    MOVE 999001111 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE 19800115 TO CIF-DOB
+    MOVE "I" TO CIF-CUST-TYPE
+    MOVE "Y" TO CIF-CIP-VERIFIED
+    MOVE 20190101 TO CIF-CIP-VERIFY-DATE
+    MOVE "DL" TO CIF-CIP-DOC-TYPE
+    MOVE 20200101 TO CIF-CIP-DOC-EXPIRY
+    MOVE "C" TO CIF-OFAC-STATUS
+    MOVE 1 TO CIF-BSA-RISK-RATING
+    MOVE "A" TO CIF-STATUS
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0084"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0084 actual=" WS-CIF-RESULT-CODE
     END-IF.

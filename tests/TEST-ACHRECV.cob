@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
-*> Tests: ACH credits, debits, returns, batch validation (10 tests)
+*> Tests: ACH credits, debits, returns, batch validation (12 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -11,6 +11,7 @@ WORKING-STORAGE SECTION.
 01  WS-PASS-COUNT          PIC 9(3) VALUE 0.
 01  WS-FAIL-COUNT          PIC 9(3) VALUE 0.
 01  WS-TEST-NAME           PIC X(60).
+01  WS-EXPECTED-AVAIL-BAL  PIC S9(13)V99.
 
 *> ACH Entry (replicate LS-ACH-ENTRY from ACHRECV0)
 01  WS-ACH-ENTRY.
@@ -57,6 +58,8 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-008
     PERFORM TEST-AR-009
     PERFORM TEST-AR-010
+    PERFORM TEST-AR-011
+    PERFORM TEST-AR-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -595,4 +598,122 @@ TEST-AR-010.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACH-RESULT-CODE
             " expected=E0094"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-011: ACH credit updates ACCT-AVAIL-BAL correctly
+*> Ledger=5000, Hold=200, Credit=1500 -> Avail=(5000+1500)-200=6300
+*> ---------------------------------------------------------------
+TEST-AR-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-011: ACH credit updates ACCT-AVAIL-BAL"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH credit
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 22 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000011" TO WS-ACH-ACCT-NUMBER
+    MOVE 1500.00 TO WS-ACH-AMOUNT
+    MOVE "PAYROLL DEPOSIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000011" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 0 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 1500.00 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Active checking: ledger=5000, hold=200, avail=4800
+    MOVE 100000000011 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 4800.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 200.00 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    *> Expected: ledger=6500, avail=6500-200=6300
+    MOVE 6300.00 TO WS-EXPECTED-AVAIL-BAL
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0000"
+        IF ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+            = WS-EXPECTED-AVAIL-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " avail=" ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+                " expected=6300.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-012: ACH debit updates ACCT-AVAIL-BAL correctly
+*> Ledger=3000, Hold=100, Debit=250 -> Avail=(3000-250)-100=2650
+*> ---------------------------------------------------------------
+TEST-AR-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-012: ACH debit updates ACCT-AVAIL-BAL"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH debit
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000012" TO WS-ACH-ACCT-NUMBER
+    MOVE 250.00 TO WS-ACH-AMOUNT
+    MOVE "BILL PAYMENT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000012" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 250.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Active checking: ledger=3000, hold=100, avail=2900
+    MOVE 100000000012 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 3000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 2900.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 100.00 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    *> Expected: ledger=2750, avail=2750-100=2650
+    MOVE 2650.00 TO WS-EXPECTED-AVAIL-BAL
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0000"
+        IF ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+            = WS-EXPECTED-AVAIL-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " avail=" ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+                " expected=2650.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACH-RESULT-CODE
     END-IF.

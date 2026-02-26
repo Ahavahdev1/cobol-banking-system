@@ -8,6 +8,8 @@ PROGRAM-ID. TXNPOST0.
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 01  WS-DEPOSIT-GL            PIC 9(10).
+*> BSA/AML CTR threshold - must match WS-CTR-THRESHOLD in CPYCONST
+01  WS-LOCAL-CTR-THRESHOLD   PIC S9(13)V99 VALUE +10000.00.
 
 LINKAGE SECTION.
 COPY CPYTXN.
@@ -57,6 +59,12 @@ VALIDATE-AMOUNT.
 
 *> ---------------------------------------------------------------
 *> Validate account status flags
+*> NOTE: OFAC screening is enforced at two levels:
+*>   1. CIF level - CIFMGMT checks OFAC status on the customer
+*>      record and blocks all activity for flagged customers.
+*>   2. Account level - An OFAC match results in the account
+*>      being placed on legal hold (ACCT-LEGAL-HOLD = "Y"),
+*>      which is checked below to block debit transactions.
 *> ---------------------------------------------------------------
 VALIDATE-ACCOUNT-STATUS.
     IF ACCT-STATUS = "F"
@@ -69,6 +77,7 @@ VALIDATE-ACCOUNT-STATUS.
         MOVE "Account is closed" TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF
+    *> Legal hold check - also covers OFAC-flagged accounts
     IF ACCT-LEGAL-HOLD = "Y" AND TXN-DR-CR = "D"
         MOVE "E0035" TO LS-TXN-RESULT-CODE
         MOVE "Account has legal hold" TO LS-TXN-RESULT-MSG
@@ -180,7 +189,7 @@ DETERMINE-DEPOSIT-GL.
 *> Check if cash amount triggers CTR reporting
 *> ---------------------------------------------------------------
 CHECK-CTR.
-    IF TXN-CASH-AMOUNT >= 10000.00
+    IF TXN-CASH-AMOUNT >= WS-LOCAL-CTR-THRESHOLD
         MOVE "Y" TO TXN-CTR-REPORTABLE
     ELSE
         MOVE "N" TO TXN-CTR-REPORTABLE

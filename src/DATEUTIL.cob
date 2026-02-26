@@ -41,6 +41,51 @@ WORKING-STORAGE SECTION.
 01  WS-DAYS-IN-MONTH              PIC 9(2).
 01  WS-IS-LEAP                    PIC 9(1).
 
+*> Federal bank holiday table (2025-2027, Regulation CC)
+01  WS-HOLIDAY-TABLE.
+    05  WS-HOLIDAY-COUNT          PIC 9(3) VALUE 033.
+    05  WS-HOLIDAYS.
+        *> 2025 Federal Bank Holidays
+        10  FILLER PIC 9(8) VALUE 20250101. *> New Year's Day
+        10  FILLER PIC 9(8) VALUE 20250120. *> MLK Day
+        10  FILLER PIC 9(8) VALUE 20250217. *> Presidents Day
+        10  FILLER PIC 9(8) VALUE 20250526. *> Memorial Day
+        10  FILLER PIC 9(8) VALUE 20250619. *> Juneteenth
+        10  FILLER PIC 9(8) VALUE 20250704. *> Independence Day
+        10  FILLER PIC 9(8) VALUE 20250901. *> Labor Day
+        10  FILLER PIC 9(8) VALUE 20251013. *> Columbus Day
+        10  FILLER PIC 9(8) VALUE 20251111. *> Veterans Day
+        10  FILLER PIC 9(8) VALUE 20251127. *> Thanksgiving
+        10  FILLER PIC 9(8) VALUE 20251225. *> Christmas
+        *> 2026 Federal Bank Holidays
+        10  FILLER PIC 9(8) VALUE 20260101. *> New Year's Day
+        10  FILLER PIC 9(8) VALUE 20260119. *> MLK Day
+        10  FILLER PIC 9(8) VALUE 20260216. *> Presidents Day
+        10  FILLER PIC 9(8) VALUE 20260525. *> Memorial Day
+        10  FILLER PIC 9(8) VALUE 20260619. *> Juneteenth
+        10  FILLER PIC 9(8) VALUE 20260703. *> Independence Day (obs)
+        10  FILLER PIC 9(8) VALUE 20260907. *> Labor Day
+        10  FILLER PIC 9(8) VALUE 20261012. *> Columbus Day
+        10  FILLER PIC 9(8) VALUE 20261111. *> Veterans Day
+        10  FILLER PIC 9(8) VALUE 20261126. *> Thanksgiving
+        10  FILLER PIC 9(8) VALUE 20261225. *> Christmas
+        *> 2027 Federal Bank Holidays
+        10  FILLER PIC 9(8) VALUE 20270101. *> New Year's Day
+        10  FILLER PIC 9(8) VALUE 20270118. *> MLK Day
+        10  FILLER PIC 9(8) VALUE 20270215. *> Presidents Day
+        10  FILLER PIC 9(8) VALUE 20270531. *> Memorial Day
+        10  FILLER PIC 9(8) VALUE 20270618. *> Juneteenth (obs Fri)
+        10  FILLER PIC 9(8) VALUE 20270705. *> Independence Day (obs Mon)
+        10  FILLER PIC 9(8) VALUE 20270906. *> Labor Day
+        10  FILLER PIC 9(8) VALUE 20271011. *> Columbus Day
+        10  FILLER PIC 9(8) VALUE 20271111. *> Veterans Day
+        10  FILLER PIC 9(8) VALUE 20271125. *> Thanksgiving
+        10  FILLER PIC 9(8) VALUE 20271224. *> Christmas (obs Fri)
+    05  WS-HOLIDAY-ENTRY REDEFINES WS-HOLIDAYS.
+        10  WS-HOLIDAY-DATE       PIC 9(8) OCCURS 33 TIMES.
+01  WS-HOLIDAY-IDX                PIC 9(3).
+01  WS-IS-HOLIDAY                 PIC 9(1).
+
 *> DIFF result (signed)
 01  WS-DIFF-RESULT                PIC S9(10).
 
@@ -89,7 +134,10 @@ DO-BDAY.
         PERFORM ADVANCE-ONE-CALENDAR-DAY
         PERFORM GET-DOW-FOR-BDAY
         IF NOT WS-DOW-SATURDAY AND NOT WS-DOW-SUNDAY
-            SUBTRACT 1 FROM WS-BDAY-REMAINING
+            PERFORM CHECK-HOLIDAY
+            IF WS-IS-HOLIDAY = 0
+                SUBTRACT 1 FROM WS-BDAY-REMAINING
+            END-IF
         END-IF
     END-PERFORM
 
@@ -132,6 +180,20 @@ GET-DOW-FOR-BDAY.
     DIVIDE WS-JDN-TEMP BY 100
         GIVING WS-MONTH REMAINDER WS-DAY
     PERFORM CALC-DOW.
+
+*> ----------------------------------------------------------------
+*> Check if WS-BDAY-CURRENT-DATE is a federal bank holiday
+*> Output: WS-IS-HOLIDAY (1=yes, 0=no)
+*> ----------------------------------------------------------------
+CHECK-HOLIDAY.
+    MOVE 0 TO WS-IS-HOLIDAY
+    PERFORM VARYING WS-HOLIDAY-IDX FROM 1 BY 1
+        UNTIL WS-HOLIDAY-IDX > WS-HOLIDAY-COUNT
+        IF WS-BDAY-CURRENT-DATE =
+            WS-HOLIDAY-DATE(WS-HOLIDAY-IDX)
+            MOVE 1 TO WS-IS-HOLIDAY
+        END-IF
+    END-PERFORM.
 
 *> ================================================================
 *> WKDY - Check if date is a weekday

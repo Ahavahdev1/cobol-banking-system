@@ -130,6 +130,25 @@ MAIN-LOGIC.
         PERFORM PROCESS-ACCOUNT
     END-IF
 
+    *> Trial balance verification
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "TBAL" TO WS-GL-FUNCTION
+    CALL "GLPOST0" USING WS-GL-FUNCTION
+                         WS-GL-ENTRY
+                         GL-RECORD
+                         WS-TRIAL-BAL
+                         WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0000"
+        IF WS-TB-IS-BALANCED = "N"
+            ADD 1 TO WS-ACCTS-ERRORS
+        END-IF
+    ELSE
+        ADD 1 TO WS-ACCTS-ERRORS
+    END-IF
+
     *> Write batch summary
     MOVE WS-ACCTS-PROCESSED TO BATCH-ACCTS-PROCESSED
     MOVE WS-ACCTS-ERRORS TO BATCH-ACCTS-ERRORS
@@ -164,7 +183,15 @@ PROCESS-ACCOUNT.
         PERFORM EOD-POST-INTEREST-PAYMENT
     END-IF
 
-    *> Step 3: Log audit trail
+    *> Step 3: Release matured holds
+    PERFORM EOD-RELEASE-HOLDS
+
+    *> Step 4: CTR aggregation
+    *> Note: CTR aggregation for cash transactions is handled at the
+    *> transaction level by TXNPOST0 via CHECK-CTR in BSACTRO.
+    *> EOD simply reports batch totals via BATCH-CTR-FILED.
+
+    *> Step 5: Log audit trail
     PERFORM EOD-LOG-AUDIT.
 
 *> ---------------------------------------------------------------
@@ -223,3 +250,18 @@ EOD-LOG-AUDIT.
     CALL "AUDTLOG0" USING WS-AUDIT-FUNCTION
                           AUDIT-RECORD
                           WS-AUDIT-RESULT.
+
+*> ---------------------------------------------------------------
+*> Release matured holds on account
+*> Simplified: if ACCT-HOLD-AMOUNT > 0, release all holds and
+*> recalculate available balance. A production system would iterate
+*> individual HOLD-RECORDs and compare HOLD-RELEASE-DATE to batch
+*> date for each active hold.
+*> ---------------------------------------------------------------
+EOD-RELEASE-HOLDS.
+    IF ACCT-HOLD-AMOUNT > 0
+        SUBTRACT ACCT-HOLD-AMOUNT FROM ACCT-HOLD-AMOUNT
+        COMPUTE ACCT-AVAIL-BAL =
+            ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ADD 1 TO WS-HOLDS-RELEASED
+    END-IF.

@@ -48,6 +48,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DU-014
     PERFORM TEST-DU-015
     PERFORM TEST-DU-016
+    PERFORM TEST-DU-017
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -507,6 +508,37 @@ TEST-DU-016.
             ADD 1 TO WS-FAIL-COUNT
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " expected=20260223 actual=" WS-RESULT-DATE
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-DATE-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DU-017: BDAY Fri+1 skips weekend + MLK Day -> Tuesday
+*> Jan 16 2026 (Fri) + 1 bday -> skip Sat 17, Sun 18,
+*> Mon 19 (MLK Day) = Tue Jan 20
+*> ---------------------------------------------------------------
+TEST-DU-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DU-017: BDAY Fri+1 skip MLK Day" TO WS-TEST-NAME
+    INITIALIZE WS-DATE-INPUT
+    INITIALIZE WS-DATE-OUTPUT
+    INITIALIZE WS-DATE-RESULT
+    MOVE "BDAY" TO WS-FUNCTION
+    MOVE 20260116 TO WS-DATE1
+    MOVE 1 TO WS-DAYS-TO-ADD
+    CALL "DATEUTIL" USING WS-FUNCTION WS-DATE-INPUT
+                          WS-DATE-OUTPUT WS-DATE-RESULT
+    IF WS-DATE-RESULT-CODE = "E0000"
+        IF WS-RESULT-DATE = 20260120
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expected=20260120 actual=" WS-RESULT-DATE
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

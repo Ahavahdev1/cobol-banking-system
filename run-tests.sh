@@ -87,7 +87,7 @@ compile_and_run "TEST-REGD" "REGDCHK0"
 echo ""
 echo "=== PHASE 3: PAYMENTS + INTEGRATION ==="
 
-compile_and_run "TEST-ACHRECV" "ACHRECV0"
+compile_and_run "TEST-ACHRECV" "ACHRECV0" "AUDTLOG0" "REGDCHK0"
 compile_and_run "TEST-INTEG-EOD" "TXNPOST0" "INTCALC0" "GLPOST0" \
     "HOLDCALC0" "DATEUTIL" "ODMGMT0" "BSACTRO" "FEECALC0"
 
@@ -105,6 +105,7 @@ compile_and_run "TEST-AUDTLOG" "AUDTLOG0"
 compile_and_run "TEST-FILEIO" "FILEIO0"
 compile_and_run "TEST-BATCH-EOD" "EODPROC0" "TXNPOST0" "INTCALC0" "GLPOST0" \
     "HOLDCALC0" "DATEUTIL" "AUDTLOG0" "FEECALC0"
+compile_and_run "TEST-BATCH-EOM" "EOMPROC0" "TXNPOST0" "FEECALC0" "AUDTLOG0"
 
 # Summary
 echo ""

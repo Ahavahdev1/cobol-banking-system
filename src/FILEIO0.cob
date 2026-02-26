@@ -305,6 +305,12 @@ DO-WRITE.
 *> REWRITE - Update existing record
 *> ---------------------------------------------------------------
 DO-REWRITE.
+    IF LS-FIO-FILE-ID = "AUDT"
+        MOVE "99" TO LS-FIO-STATUS
+        MOVE "E0005" TO LS-FIO-RESULT-CODE
+        MOVE "Audit records are immutable" TO LS-FIO-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
     EVALUATE LS-FIO-FILE-ID
         WHEN "ACCT"
             REWRITE AF-ACCT-REC FROM LS-RECORD-AREA
@@ -339,6 +345,12 @@ DO-REWRITE.
 *> DELETE - Delete record by key
 *> ---------------------------------------------------------------
 DO-DELETE.
+    IF LS-FIO-FILE-ID = "AUDT"
+        MOVE "99" TO LS-FIO-STATUS
+        MOVE "E0005" TO LS-FIO-RESULT-CODE
+        MOVE "Audit records are immutable" TO LS-FIO-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
     EVALUATE LS-FIO-FILE-ID
         WHEN "ACCT"
             DELETE ACCT-FILE

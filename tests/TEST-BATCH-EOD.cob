@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-BATCH-EOD.
 *> ================================================================
 *> TEST-BATCH-EOD - Integration test for EODPROC0 End-of-Day Batch
 *> Tests: EOD cycle with interest accrual, interest payment,
-*>        batch status, multi-account (8 tests)
+*>        batch status, multi-account, error paths (12 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -38,6 +38,10 @@ MAIN-PROGRAM.
     PERFORM TEST-BE-006
     PERFORM TEST-BE-007
     PERFORM TEST-BE-008
+    PERFORM TEST-BE-009
+    PERFORM TEST-BE-010
+    PERFORM TEST-BE-011
+    PERFORM TEST-BE-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -278,4 +282,119 @@ TEST-BE-008.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " processed=" BATCH-ACCTS-PROCESSED
             " expected=0"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-009: Dormant account (status D) still processed
+*> ---------------------------------------------------------------
+TEST-BE-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-009: Dormant acct processed -> E0000" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "D" TO ACCT-STATUS
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        AND BATCH-ACCTS-PROCESSED = 1
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+            " processed=" BATCH-ACCTS-PROCESSED
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-010: Frozen account (status F) is skipped
+*> ---------------------------------------------------------------
+TEST-BE-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-010: Frozen acct skipped" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "F" TO ACCT-STATUS
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF BATCH-ACCTS-PROCESSED = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " processed=" BATCH-ACCTS-PROCESSED
+            " expected=0"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-011: EOD releases hold and recalculates available balance
+*> ---------------------------------------------------------------
+TEST-BE-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-011: Hold released, avail=ledger" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE 500.00 TO ACCT-HOLD-AMOUNT
+    COMPUTE ACCT-AVAIL-BAL =
+        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-HOLD-AMOUNT = 0
+            AND ACCT-AVAIL-BAL = ACCT-LEDGER-BAL
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " hold=" ACCT-HOLD-AMOUNT
+                " avail=" ACCT-AVAIL-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " hold=" ACCT-HOLD-AMOUNT
+                " avail=" ACCT-AVAIL-BAL
+                " ledger=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BE-012: Batch date stored and status P on error
+*> ---------------------------------------------------------------
+TEST-BE-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BE-012: Batch date set, status=P on err" TO WS-TEST-NAME
+    PERFORM SETUP-INTEREST-ACCOUNT
+    MOVE "Z" TO ACCT-INT-ACCRUAL-BASIS
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260226 TO WS-BATCH-DATE
+    CALL "EODPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    IF BATCH-DATE = 20260226
+        AND BATCH-STATUS = "P"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " date=" BATCH-DATE
+            " status=" BATCH-STATUS
+            " expected date=20260226 status=P"
     END-IF.
