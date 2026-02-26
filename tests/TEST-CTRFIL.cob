@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-CTRFIL.
 *> ================================================================
 *> TEST-CTRFIL - Test suite for CTRFIL0 CTR Filing Manager
-*> Tests: Create, file, query, void CTR records (10 tests)
+*> Tests: Create, file, query, void CTR records (11 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -34,6 +34,7 @@ MAIN-PROGRAM.
     PERFORM TEST-CT-008
     PERFORM TEST-CT-009
     PERFORM TEST-CT-010
+    PERFORM TEST-CT-011
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -331,4 +332,24 @@ TEST-CT-010.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-CTR-RESULT-CODE " expected=E0006"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CT-011: Invalid function -> E0001
+*> ---------------------------------------------------------------
+TEST-CT-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CT-011: Invalid function -> E0001" TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-CTR-RESULT
+    MOVE "XXXX" TO WS-CTR-FUNCTION
+    CALL "CTRFIL0" USING WS-CTR-FUNCTION CTR-RECORD
+                         WS-CTR-RESULT
+    IF WS-CTR-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-CTR-RESULT-CODE " expected=E0001"
     END-IF.

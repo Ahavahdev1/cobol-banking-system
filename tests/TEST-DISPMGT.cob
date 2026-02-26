@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DISPMGT.
 *> ================================================================
 *> TEST-DISPMGT - Test suite for DISPMGT0 Reg E Dispute Management
-*> Tests: File, provisional credit, resolve, inquiry (9 tests)
+*> Tests: File, provisional credit, resolve, inquiry (12 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -37,6 +37,9 @@ MAIN-PROGRAM.
     PERFORM TEST-DP-007
     PERFORM TEST-DP-008
     PERFORM TEST-DP-009
+    PERFORM TEST-DP-010
+    PERFORM TEST-DP-011
+    PERFORM TEST-DP-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -421,4 +424,97 @@ TEST-DP-009.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-DSP-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-010: PROV with dispute ID = 0 -> E0087
+*> ---------------------------------------------------------------
+TEST-DP-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-010: PROV dispute-id=0 -> E0087"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    MOVE 0 TO DSP-DISPUTE-ID
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 200.00 TO DSP-TXN-AMOUNT
+    MOVE "P" TO DSP-STATUS
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0087"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0087"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-011: RSLV with invalid resolution code -> E0086
+*> ---------------------------------------------------------------
+TEST-DP-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-011: RSLV invalid resolution code -> E0086"
+        TO WS-TEST-NAME
+    *> File a dispute to get a valid dispute record
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "FILE" TO WS-DSP-FUNCTION
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE 000000000000106 TO DSP-TXN-ID
+    MOVE 350.00 TO DSP-TXN-AMOUNT
+    MOVE "UNAU" TO DSP-DISPUTE-TYPE
+    MOVE 100000000001 TO ACCT-NUMBER
+    MOVE 2000.00 TO ACCT-LEDGER-BAL
+    MOVE 2000.00 TO ACCT-AVAIL-BAL
+    MOVE 0.00 TO ACCT-HOLD-AMOUNT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Issue provisional credit so status allows RSLV
+    MOVE "PROV" TO WS-DSP-FUNCTION
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    *> Now try RSLV with invalid resolution code "XX"
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE "XX" TO DSP-RESOLUTION-CODE
+    INITIALIZE WS-DSP-RESULT
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0086"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0086"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DP-012: RSLV with dispute ID = 0 -> E0087
+*> ---------------------------------------------------------------
+TEST-DP-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DP-012: RSLV dispute-id=0 -> E0087"
+        TO WS-TEST-NAME
+    INITIALIZE DISPUTE-RECORD
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-DSP-RESULT
+    MOVE "RSLV" TO WS-DSP-FUNCTION
+    MOVE 0 TO DSP-DISPUTE-ID
+    MOVE 100000000001 TO DSP-ACCT-NUMBER
+    MOVE "AP" TO DSP-RESOLUTION-CODE
+    CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
+                          ACCT-RECORD WS-DSP-RESULT
+    IF WS-DSP-RESULT-CODE = "E0087"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DSP-RESULT-CODE " expected=E0087"
     END-IF.

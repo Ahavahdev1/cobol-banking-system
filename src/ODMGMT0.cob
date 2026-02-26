@@ -41,11 +41,7 @@ ODMGMT0-MAIN.
     MOVE ACCT-NSF-COUNT-TODAY TO LS-OD-NEW-NSF-COUNT
 
     *> Determine effective balance
-    IF ACCT-AVAIL-BAL NOT = ZEROS
-        MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL
-    ELSE
-        MOVE ACCT-LEDGER-BAL TO WS-EFFECTIVE-BAL
-    END-IF
+    MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL
 
     *> Step 1: Reg E opt-in check
     *> ATM and POS require opt-in; CK and AC are exempt

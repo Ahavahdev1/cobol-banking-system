@@ -3,7 +3,7 @@ PROGRAM-ID. TEST-ACHRECV.
 *> ================================================================
 *> TEST-ACHRECV - Test suite for ACH Incoming File Processor
 *> Tests: ACH credits, debits, returns, batch validation,
-*>        edge cases, overflow (21 tests)
+*>        edge cases, overflow, OFAC screening (24 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -70,6 +70,9 @@ MAIN-PROGRAM.
     PERFORM TEST-AR-019
     PERFORM TEST-AR-020
     PERFORM TEST-AR-021
+    PERFORM TEST-AR-022
+    PERFORM TEST-AR-023
+    PERFORM TEST-AR-024
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1206,4 +1209,163 @@ TEST-AR-021.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACH-RESULT-CODE
             " expected=E0040"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-022: ACH credit with OFAC-matching originator -> E0025
+*> ---------------------------------------------------------------
+TEST-AR-022.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-022: ACH credit OFAC match on originator -> E0025"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH credit from OFAC-listed originator
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 22 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000022" TO WS-ACH-ACCT-NUMBER
+    MOVE 5000.00 TO WS-ACH-AMOUNT
+    MOVE "OFAC-TEST-MATCH" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000022" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 0 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 5000.00 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Valid active checking account
+    MOVE 100000000022 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 10000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-HOLD-AMOUNT OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RESULT-CODE = "E0025"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACH-RESULT-CODE
+            " expected=E0025"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-023: ACH debit with R07 (auth revoked / restricted account)
+*> ---------------------------------------------------------------
+TEST-AR-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-023: ACH debit restricted acct -> R07"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH debit (code 27) to restricted account
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000023" TO WS-ACH-ACCT-NUMBER
+    MOVE 750.00 TO WS-ACH-AMOUNT
+    MOVE "AUTH REVOKED DEBIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000023" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 750.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Restricted account (status=R), debit should trigger R07
+    MOVE 100000000023 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 5000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "R" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RETURN-FLAG = "Y"
+        IF WS-ACH-RETURN-CODE = "R07"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " return-code=" WS-ACH-RETURN-CODE
+                " expected=R07"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AR-024: ACH debit with R08 (stop payment on item)
+*> ---------------------------------------------------------------
+TEST-AR-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AR-024: ACH debit stop payment -> R08"
+        TO WS-TEST-NAME
+    INITIALIZE WS-ACH-ENTRY
+    INITIALIZE WS-ACCT-RECORD
+    INITIALIZE WS-ACH-RETURN-INFO
+    INITIALIZE WS-ACH-RESULT
+    *> ACH debit (code 27) to account with active stop pay
+    MOVE "6" TO WS-ACH-RECORD-TYPE
+    MOVE 27 TO WS-ACH-TXN-CODE
+    MOVE 021000021 TO WS-ACH-ROUTING-NUM
+    MOVE "100000000024" TO WS-ACH-ACCT-NUMBER
+    MOVE 400.00 TO WS-ACH-AMOUNT
+    MOVE "STOP PAY DEBIT" TO WS-ACH-INDIV-NAME
+    MOVE "000000000000024" TO WS-ACH-TRACE-NUMBER
+    MOVE "N" TO WS-ACH-ADDENDA-FLAG
+    MOVE 1 TO WS-ACH-BATCH-COUNT
+    MOVE 400.00 TO WS-ACH-BATCH-DR-TOTAL
+    MOVE 0 TO WS-ACH-BATCH-CR-TOTAL
+    MOVE 0000000000 TO WS-ACH-BATCH-HASH
+    *> Active account with stop payment active
+    MOVE 100000000024 TO ACCT-NUMBER OF WS-ACCT-RECORD
+    MOVE 0 TO ACCT-CHECK-DIGIT OF WS-ACCT-RECORD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE OF WS-ACCT-RECORD
+    MOVE "D" TO ACCT-TYPE OF WS-ACCT-RECORD
+    MOVE "CH" TO ACCT-SUB-TYPE OF WS-ACCT-RECORD
+    MOVE 8000.00 TO ACCT-LEDGER-BAL OF WS-ACCT-RECORD
+    MOVE 8000.00 TO ACCT-AVAIL-BAL OF WS-ACCT-RECORD
+    MOVE "A" TO ACCT-STATUS OF WS-ACCT-RECORD
+    MOVE 1 TO ACCT-STOP-PAYS-ACTIVE OF WS-ACCT-RECORD
+    CALL "ACHRECV0" USING WS-ACH-ENTRY
+                          WS-ACCT-RECORD
+                          WS-ACH-RETURN-INFO
+                          WS-ACH-RESULT
+    IF WS-ACH-RETURN-FLAG = "Y"
+        IF WS-ACH-RETURN-CODE = "R08"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " return-code=" WS-ACH-RETURN-CODE
+                " expected=R08"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " return-flag=" WS-ACH-RETURN-FLAG
+            " expected=Y"
     END-IF.

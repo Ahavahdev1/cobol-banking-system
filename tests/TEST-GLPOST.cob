@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-GLPOST.
 *> ================================================================
 *> TEST-GLPOST - Test suite for GLPOST0 General Ledger posting
-*> Tests: POST, TBAL, CRPT functions (17 tests)
+*> Tests: POST, TBAL, CRPT functions (19 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -86,6 +86,8 @@ MAIN-PROGRAM.
     PERFORM TEST-GL-015
     PERFORM TEST-GL-016
     PERFORM TEST-GL-017
+    PERFORM TEST-GL-018
+    PERFORM TEST-GL-019
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -731,4 +733,57 @@ TEST-GL-017.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-018: POST with zero amount to active GL -> E0063
+*> ---------------------------------------------------------------
+TEST-GL-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-018: POST zero amt active=E0063" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "POST" TO WS-FUNCTION
+    MOVE 1010 TO WS-GLE-DR-ACCT
+    MOVE 4010 TO WS-GLE-CR-ACCT
+    MOVE 0 TO WS-GLE-AMOUNT
+    MOVE "Zero amount active" TO WS-GLE-DESCRIPTION
+    MOVE 20260226 TO WS-GLE-POST-DATE
+    MOVE "A" TO GL-STATUS
+    MOVE "A" TO GL-ACCT-TYPE
+    MOVE "D" TO GL-NORMAL-BALANCE
+    MOVE 1000.00 TO GL-CURRENT-BAL
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0063"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0063 actual=" WS-GL-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> GL-019: Invalid function -> E0001
+*> ---------------------------------------------------------------
+TEST-GL-019.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "GL-019: Invalid function=E0001" TO WS-TEST-NAME
+    INITIALIZE WS-GL-ENTRY
+    INITIALIZE GL-RECORD
+    INITIALIZE WS-TRIAL-BAL
+    INITIALIZE WS-GL-RESULT
+    MOVE "XXXX" TO WS-FUNCTION
+    CALL "GLPOST0" USING WS-FUNCTION WS-GL-ENTRY
+                         GL-RECORD WS-TRIAL-BAL WS-GL-RESULT
+    IF WS-GL-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0001 actual=" WS-GL-RESULT-CODE
     END-IF.

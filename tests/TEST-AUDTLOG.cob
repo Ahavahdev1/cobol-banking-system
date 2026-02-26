@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-AUDTLOG.
 *> ================================================================
 *> TEST-AUDTLOG - Test suite for AUDTLOG0 Audit Trail Logger
-*> Tests: Write audit, read back, timestamp, entity key (8 tests)
+*> Tests: Write audit, read back, timestamp, entity key (9 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -32,6 +32,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AT-006
     PERFORM TEST-AT-007
     PERFORM TEST-AT-008
+    PERFORM TEST-AU-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -277,4 +278,24 @@ TEST-AT-008.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-AUDT-RESULT-CODE " expected=E0002"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AU-009: Invalid function -> E0001
+*> ---------------------------------------------------------------
+TEST-AU-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AU-009: Invalid function -> E0001" TO WS-TEST-NAME
+    INITIALIZE AUDIT-RECORD
+    INITIALIZE WS-AUDIT-RESULT
+    MOVE "XXXX" TO WS-AUDIT-FUNCTION
+    CALL "AUDTLOG0" USING WS-AUDIT-FUNCTION AUDIT-RECORD
+                          WS-AUDIT-RESULT
+    IF WS-AUDT-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-AUDT-RESULT-CODE " expected=E0001"
     END-IF.

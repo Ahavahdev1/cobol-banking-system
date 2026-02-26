@@ -29,6 +29,13 @@ COPY CPYAUDT.
     05  WS-AUDT-RESULT-CODE  PIC X(5).
     05  WS-AUDT-RESULT-MSG   PIC X(50).
 
+*> OFAC screening areas
+COPY CPYOFAC.
+01  WS-OFAC-FUNCTION          PIC X(4).
+01  WS-OFAC-RESULT.
+    05  WS-OFAC-RESULT-CODE   PIC X(5).
+    05  WS-OFAC-RESULT-MSG    PIC X(50).
+
 LINKAGE SECTION.
 01  LS-ACH-ENTRY.
     05  LS-ACH-RECORD-TYPE       PIC X(1).
@@ -96,6 +103,12 @@ MAIN-PROCESS.
     *> Step 3: Account validation
     PERFORM CHECK-ACCOUNT
     IF LS-ACH-RETURN-FLAG = "Y"
+        GOBACK
+    END-IF
+
+    *> Step 3b: OFAC screening on originator
+    PERFORM CHECK-OFAC
+    IF LS-ACH-RESULT-CODE NOT = "E0000"
         GOBACK
     END-IF
 
@@ -260,6 +273,24 @@ CHECK-REG-D.
         MOVE "R09" TO LS-ACH-RETURN-CODE
         MOVE "REG D TRANSFER LIMIT EXCEEDED"
             TO LS-ACH-RETURN-REASON
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CHECK-OFAC - Screen ACH originator against OFAC SDN list
+*> ---------------------------------------------------------------
+CHECK-OFAC.
+    INITIALIZE OFAC-CHECK-RECORD
+    INITIALIZE WS-OFAC-RESULT
+    MOVE LS-ACH-INDIV-NAME TO OFAC-CHECK-NAME
+    MOVE "O" TO OFAC-CHECK-TYPE
+    MOVE "CHKN" TO WS-OFAC-FUNCTION
+    CALL "OFACCHK0" USING WS-OFAC-FUNCTION
+                          OFAC-CHECK-RECORD
+                          WS-OFAC-RESULT
+    IF WS-OFAC-RESULT-CODE = "E0025"
+        MOVE "E0025" TO LS-ACH-RESULT-CODE
+        MOVE "OFAC match on ACH originator"
+            TO LS-ACH-RESULT-MSG
     END-IF.
 
 *> ---------------------------------------------------------------

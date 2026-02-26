@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-DORMANT.
 *> ================================================================
 *> TEST-DORMANT - Test suite for DORMANT0 Dormancy Management
-*> Tests: Dormancy detection, escheatment, edge cases (8 tests)
+*> Tests: Dormancy detection, escheatment, edge cases (9 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -35,6 +35,7 @@ MAIN-PROGRAM.
     PERFORM TEST-DR-006
     PERFORM TEST-DR-007
     PERFORM TEST-DR-008
+    PERFORM TEST-DR-009
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -302,4 +303,27 @@ TEST-DR-008.
             " rc=" WS-DORM-RESULT-CODE
             " action=" WS-DORM-ACTION-TAKEN
             " status=" ACCT-STATUS
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> DR-009: Invalid function -> E0001
+*> ---------------------------------------------------------------
+TEST-DR-009.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "DR-009: Invalid function -> E0001" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-ACCOUNT
+    MOVE 20260226 TO WS-BATCH-DATE
+    MOVE "XXXX" TO WS-DORM-FUNCTION
+    INITIALIZE WS-DORM-RESULT
+    CALL "DORMANT0" USING WS-DORM-FUNCTION
+                          ACCT-RECORD
+                          WS-BATCH-DATE
+                          WS-DORM-RESULT
+    IF WS-DORM-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-DORM-RESULT-CODE " expected=E0001"
     END-IF.

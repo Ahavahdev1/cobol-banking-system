@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-SARFIL.
 *> ================================================================
 *> TEST-SARFIL - Test suite for SARFIL0 SAR Filing Manager
-*> Tests: Create, file, dismiss, query, update SAR records (10 tests)
+*> Tests: Create, file, dismiss, query, update SAR records (11 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -34,6 +34,7 @@ MAIN-PROGRAM.
     PERFORM TEST-SF-008
     PERFORM TEST-SF-009
     PERFORM TEST-SF-010
+    PERFORM TEST-SR-011
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -351,4 +352,24 @@ TEST-SF-010.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-SAR-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SR-011: Invalid function -> E0001
+*> ---------------------------------------------------------------
+TEST-SR-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "SR-011: Invalid function -> E0001" TO WS-TEST-NAME
+    INITIALIZE SAR-RECORD
+    INITIALIZE WS-SAR-RESULT
+    MOVE "XXXX" TO WS-SAR-FUNCTION
+    CALL "SARFIL0" USING WS-SAR-FUNCTION SAR-RECORD
+                         WS-SAR-RESULT
+    IF WS-SAR-RESULT-CODE = "E0001"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-SAR-RESULT-CODE " expected=E0001"
     END-IF.
