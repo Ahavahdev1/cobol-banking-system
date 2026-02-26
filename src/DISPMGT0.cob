@@ -166,9 +166,6 @@ DO-PROVISIONAL-CREDIT.
         GOBACK
     END-IF
 
-    *> Set status to Credited
-    MOVE "C" TO DSP-STATUS
-
     *> Set provisional amount and date
     MOVE DSP-TXN-AMOUNT TO DSP-PROVISIONAL-AMT
 
@@ -178,7 +175,7 @@ DO-PROVISIONAL-CREDIT.
     END-STRING
     MOVE WS-TODAY-DATE TO DSP-PROVISIONAL-DATE
 
-    *> Credit account
+    *> Credit account (before setting status to avoid inconsistency)
     ADD DSP-PROVISIONAL-AMT TO ACCT-LEDGER-BAL
         ON SIZE ERROR
             MOVE "E0040" TO LS-DSP-RESULT-CODE
@@ -194,6 +191,9 @@ DO-PROVISIONAL-CREDIT.
                 TO LS-DSP-RESULT-MSG
             GOBACK
     END-COMPUTE
+
+    *> Set status to Credited only after balance update succeeds
+    MOVE "C" TO DSP-STATUS
 
     MOVE "E0000" TO LS-DSP-RESULT-CODE
     MOVE "Provisional credit issued" TO LS-DSP-RESULT-MSG.

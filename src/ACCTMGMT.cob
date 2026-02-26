@@ -104,7 +104,7 @@ OPEN-ACCOUNT.
 *> CLOSE-ACCOUNT - Close an existing account
 *> ---------------------------------------------------------------
 CLOSE-ACCOUNT.
-    IF ACCT-STATUS NOT = "A"
+    IF ACCT-STATUS NOT = "A" AND ACCT-STATUS NOT = "D"
         MOVE "E0011" TO LS-ACCT-RESULT-CODE
         MOVE "Only active accounts can be closed"
             TO LS-ACCT-RESULT-MSG
