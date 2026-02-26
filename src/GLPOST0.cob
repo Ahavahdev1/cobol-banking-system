@@ -73,27 +73,65 @@ POST-GL-ENTRY.
         WHEN "D"
             *> Debit-normal account (Asset, Expense)
             ADD LS-GLE-AMOUNT TO GL-CURRENT-BAL
+                ON SIZE ERROR
+                    MOVE "E0040" TO LS-GL-RESULT-CODE
+                    MOVE "Arithmetic overflow on GL balance"
+                        TO LS-GL-RESULT-MSG
+                    EXIT PARAGRAPH
+            END-ADD
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
         WHEN "C"
             *> Credit-normal account (Liability, Income, Equity)
             IF LS-GLE-DR-ACCT > LS-GLE-CR-ACCT
                 *> Contra entry: credit-normal on DR side
                 SUBTRACT LS-GLE-AMOUNT FROM GL-CURRENT-BAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on GL balance"
+                            TO LS-GL-RESULT-MSG
+                        EXIT PARAGRAPH
+                END-SUBTRACT
                 ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
+                    ON SIZE ERROR CONTINUE
+                END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
+                    ON SIZE ERROR CONTINUE
+                END-ADD
             ELSE
                 *> Normal entry: credit-normal on CR side
                 ADD LS-GLE-AMOUNT TO GL-CURRENT-BAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-GL-RESULT-CODE
+                        MOVE "Arithmetic overflow on GL balance"
+                            TO LS-GL-RESULT-MSG
+                        EXIT PARAGRAPH
+                END-ADD
                 ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
+                    ON SIZE ERROR CONTINUE
+                END-ADD
                 ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
+                    ON SIZE ERROR CONTINUE
+                END-ADD
             END-IF
         WHEN OTHER
             *> Journal mode: track double-entry totals
             ADD LS-GLE-AMOUNT TO GL-MTD-DEBITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
             ADD LS-GLE-AMOUNT TO GL-MTD-CREDITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-DEBITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
             ADD LS-GLE-AMOUNT TO GL-YTD-CREDITS
+                ON SIZE ERROR CONTINUE
+            END-ADD
     END-EVALUATE
 
     *> Update last posting date
@@ -115,6 +153,12 @@ TRIAL-BALANCE.
     END-IF
     COMPUTE LS-TB-DIFFERENCE =
         LS-TB-TOTAL-DEBITS - LS-TB-TOTAL-CREDITS
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-GL-RESULT-CODE
+            MOVE "Arithmetic overflow on trial balance"
+                TO LS-GL-RESULT-MSG
+            EXIT PARAGRAPH
+    END-COMPUTE
     IF LS-TB-DIFFERENCE = ZERO
         MOVE "Y" TO LS-TB-IS-BALANCED
     ELSE

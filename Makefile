@@ -8,7 +8,9 @@ BIN_DIR := bin
 SOURCES := $(wildcard $(SRC_DIR)/*.cob)
 PROGRAMS := $(patsubst $(SRC_DIR)/%.cob,$(BIN_DIR)/%,$(SOURCES))
 
-.PHONY: all clean test
+DATA_DIR := data
+
+.PHONY: all clean test data
 
 all: $(PROGRAMS)
 
@@ -18,8 +20,12 @@ $(BIN_DIR)/%: $(SRC_DIR)/%.cob | $(BIN_DIR)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-test:
+data:
+	mkdir -p $(DATA_DIR)
+
+test: data
 	./run-tests.sh
 
 clean:
 	rm -f $(BIN_DIR)/*
+	rm -f $(DATA_DIR)/*.dat

@@ -43,6 +43,7 @@
     05  ERR-TXN-DECEASED          PIC X(5) VALUE "E0036".
     05  ERR-TXN-INVALID-TYPE      PIC X(5) VALUE "E0037".
     05  ERR-TXN-GL-ERROR          PIC X(5) VALUE "E0038".
+    05  ERR-ARITH-OVERFLOW        PIC X(5) VALUE "E0040".
     *> Interest errors
     05  ERR-INT-INVALID-BASIS     PIC X(5) VALUE "E0050".
     05  ERR-INT-INVALID-METHOD    PIC X(5) VALUE "E0051".
@@ -60,6 +61,8 @@
     *> Compliance errors
     05  ERR-CTR-REQUIRED          PIC X(5) VALUE "E0080".
     05  ERR-REGD-EXCEEDED         PIC X(5) VALUE "E0081".
+    05  ERR-SAR-STRUCTURING       PIC X(5) VALUE "E0082".
+    05  ERR-SAR-PATTERN           PIC X(5) VALUE "E0083".
     *> ACH errors
     05  ERR-ACH-NSF               PIC X(5) VALUE "E0090".
     05  ERR-ACH-ACCT-CLOSED       PIC X(5) VALUE "E0091".

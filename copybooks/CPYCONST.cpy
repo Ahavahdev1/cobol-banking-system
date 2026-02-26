@@ -8,6 +8,10 @@
                                   VALUE +10000.00.
     05  WS-CTR-THRESHOLD-EXACT    PIC S9(13)V99
                                   VALUE +10000.00.
+    05  WS-SAR-STRUCT-THRESHOLD  PIC S9(13)V99
+                                  VALUE +8000.00.
+    05  WS-SAR-STRUCT-CEILING    PIC S9(13)V99
+                                  VALUE +9999.99.
     *> Regulation CC - Funds Availability
     05  WS-REGCC-NEXT-DAY-AMT     PIC S9(13)V99
                                    VALUE +225.00.

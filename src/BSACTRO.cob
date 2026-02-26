@@ -2,12 +2,15 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. BSACTRO.
 *> ================================================================
 *> BSACTRO - BSA/AML Currency Transaction Report Generator
-*> AGGR = Aggregate, CHEK = Check threshold, FILE = Generate CTR
+*> AGGR = Aggregate, CHEK = Check threshold,
+*> STRC = Structuring detection, SARQ = SAR query
 *> ================================================================
 
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 COPY CPYCONST.
+01  WS-COMBINED-CASH           PIC S9(13)V99.
+01  WS-TOTAL-TXN-COUNT        PIC 9(5).
 
 LINKAGE SECTION.
 01  LS-FUNCTION                   PIC X(4).
@@ -36,6 +39,10 @@ PROCEDURE DIVISION USING LS-FUNCTION
             PERFORM DO-CHEK
         WHEN "AGGR"
             PERFORM DO-AGGR
+        WHEN "STRC"
+            PERFORM DO-STRC
+        WHEN "SARQ"
+            PERFORM DO-SARQ
         WHEN OTHER
             MOVE "E0001" TO LS-BSA-RESULT-CODE
             MOVE "Invalid function" TO LS-BSA-RESULT-MSG
@@ -91,9 +98,11 @@ DO-AGGR.
     IF LS-BSA-IS-CASH = "Y"
         IF LS-BSA-CASH-DIRECTION = "I"
             ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-IN-TOTAL
+            ADD 1 TO CTR-CASH-IN-COUNT
         END-IF
         IF LS-BSA-CASH-DIRECTION = "O"
             ADD LS-BSA-CASH-AMOUNT TO CTR-CASH-OUT-TOTAL
+            ADD 1 TO CTR-CASH-OUT-COUNT
         END-IF
     END-IF
 
@@ -105,12 +114,69 @@ DO-AGGR.
         GOBACK
     END-IF
 
-    IF CTR-CASH-IN-TOTAL >= WS-CTR-THRESHOLD
+    EVALUATE TRUE
+        WHEN CTR-CASH-IN-TOTAL >= WS-CTR-THRESHOLD
+            MOVE "Y" TO LS-BSA-CTR-REQUIRED
+            MOVE "CTR required - cash in threshold"
+                TO LS-BSA-RESULT-MSG
+        WHEN CTR-CASH-OUT-TOTAL >= WS-CTR-THRESHOLD
+            MOVE "Y" TO LS-BSA-CTR-REQUIRED
+            MOVE "CTR required - cash out threshold"
+                TO LS-BSA-RESULT-MSG
+        WHEN OTHER
+            MOVE "CTR not required" TO LS-BSA-RESULT-MSG
+    END-EVALUATE.
+
+*> ---------------------------------------------------------------
+*> STRC - Structuring detection
+*> Flags when daily cash total is $8,000-$9,999 (just below CTR)
+*> and there are multiple transactions (classic structuring)
+*> ---------------------------------------------------------------
+DO-STRC.
+    MOVE "E0000" TO LS-BSA-RESULT-CODE
+    MOVE SPACES TO LS-BSA-RESULT-MSG
+    MOVE "N" TO LS-BSA-CTR-REQUIRED
+
+    *> Combine cash-in and cash-out for structuring check
+    COMPUTE WS-COMBINED-CASH =
+        CTR-CASH-IN-TOTAL + CTR-CASH-OUT-TOTAL
+
+    MOVE CTR-CASH-IN-TOTAL TO LS-BSA-CASH-IN-TOTAL
+    MOVE CTR-CASH-OUT-TOTAL TO LS-BSA-CASH-OUT-TOTAL
+
+    COMPUTE WS-TOTAL-TXN-COUNT =
+        CTR-CASH-IN-COUNT + CTR-CASH-OUT-COUNT
+
+    *> Check if total falls in structuring range ($8K-$9,999.99)
+    *> and there are multiple transactions (count > 1)
+    IF WS-COMBINED-CASH >= WS-SAR-STRUCT-THRESHOLD
+        AND WS-COMBINED-CASH <= WS-SAR-STRUCT-CEILING
+        AND WS-TOTAL-TXN-COUNT > 1
+        MOVE "E0082" TO LS-BSA-RESULT-CODE
+        MOVE "SAR required - structuring detected"
+            TO LS-BSA-RESULT-MSG
         MOVE "Y" TO LS-BSA-CTR-REQUIRED
-        MOVE "CTR required - cash in threshold" TO LS-BSA-RESULT-MSG
-    ELSE IF CTR-CASH-OUT-TOTAL >= WS-CTR-THRESHOLD
-        MOVE "Y" TO LS-BSA-CTR-REQUIRED
-        MOVE "CTR required - cash out threshold" TO LS-BSA-RESULT-MSG
     ELSE
-        MOVE "CTR not required" TO LS-BSA-RESULT-MSG
+        MOVE "No structuring pattern detected"
+            TO LS-BSA-RESULT-MSG
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> SARQ - SAR query: check if customer has pending SAR flags
+*> Uses CTR-RECORD filing status to determine pending SARs
+*> ---------------------------------------------------------------
+DO-SARQ.
+    MOVE "E0000" TO LS-BSA-RESULT-CODE
+    MOVE SPACES TO LS-BSA-RESULT-MSG
+    MOVE "N" TO LS-BSA-CTR-REQUIRED
+    MOVE CTR-CASH-IN-TOTAL TO LS-BSA-CASH-IN-TOTAL
+    MOVE CTR-CASH-OUT-TOTAL TO LS-BSA-CASH-OUT-TOTAL
+
+    IF CTR-FILING-STATUS = "P"
+        MOVE "Y" TO LS-BSA-CTR-REQUIRED
+        MOVE "Pending SAR exists for customer"
+            TO LS-BSA-RESULT-MSG
+    ELSE
+        MOVE "No pending SAR for customer"
+            TO LS-BSA-RESULT-MSG
     END-IF.

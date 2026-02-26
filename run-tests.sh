@@ -78,7 +78,7 @@ echo "=== PHASE 2: CORE BANKING ==="
 
 compile_and_run "TEST-INTCALC" "INTCALC0"
 compile_and_run "TEST-FEECALC" "FEECALC0"
-compile_and_run "TEST-HOLDCALC" "HOLDCALC0"
+compile_and_run "TEST-HOLDCALC" "HOLDCALC0" "DATEUTIL"
 compile_and_run "TEST-ODMGMT" "ODMGMT0"
 compile_and_run "TEST-BSAAML" "BSACTRO"
 compile_and_run "TEST-REGD" "REGDCHK0"
@@ -89,7 +89,22 @@ echo "=== PHASE 3: PAYMENTS + INTEGRATION ==="
 
 compile_and_run "TEST-ACHRECV" "ACHRECV0"
 compile_and_run "TEST-INTEG-EOD" "TXNPOST0" "INTCALC0" "GLPOST0" \
-    "HOLDCALC0" "ODMGMT0" "BSACTRO" "FEECALC0"
+    "HOLDCALC0" "DATEUTIL" "ODMGMT0" "BSACTRO" "FEECALC0"
+
+# Phase 4: Production Hardening Tests
+echo ""
+echo "=== PHASE 4: PRODUCTION HARDENING ==="
+
+mkdir -p data
+rm -f data/*.dat
+
+compile_and_run "TEST-OVERFLOW" "TXNPOST0" "GLPOST0" "INTCALC0" "FEECALC0"
+compile_and_run "TEST-HOLDDATE" "HOLDCALC0" "DATEUTIL"
+compile_and_run "TEST-SAR" "BSACTRO"
+compile_and_run "TEST-AUDTLOG" "AUDTLOG0"
+compile_and_run "TEST-FILEIO" "FILEIO0"
+compile_and_run "TEST-BATCH-EOD" "EODPROC0" "TXNPOST0" "INTCALC0" "GLPOST0" \
+    "HOLDCALC0" "DATEUTIL" "AUDTLOG0" "FEECALC0"
 
 # Summary
 echo ""

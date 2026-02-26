@@ -93,9 +93,21 @@ MAIN-LOGIC.
     *> Step 1: daily rate = rate / 100 / days_in_year
     COMPUTE WS-DAILY-RATE =
         ACCT-INT-RATE / 100 / WS-DAYS-IN-YEAR
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-INT-RESULT-CODE
+            MOVE "Arithmetic overflow on daily rate"
+                TO LS-INT-RESULT-MSG
+            GOBACK
+    END-COMPUTE
     *> Step 2: daily interest = balance * daily_rate
     COMPUTE WS-DAILY-INTEREST =
         ACCT-LEDGER-BAL * WS-DAILY-RATE
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-INT-RESULT-CODE
+            MOVE "Arithmetic overflow on daily interest"
+                TO LS-INT-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     MOVE WS-DAILY-INTEREST TO LS-DAILY-INT-AMT
 
@@ -111,12 +123,24 @@ MAIN-LOGIC.
         MOVE "Y" TO LS-PAYMENT-DUE
         COMPUTE LS-PAYMENT-AMT ROUNDED =
             ACCT-ACCRUED-INT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-INT-RESULT-CODE
+                MOVE "Arithmetic overflow on payment amount"
+                    TO LS-INT-RESULT-MSG
+                GOBACK
+        END-COMPUTE
         *> After payment reset: new accrued = today's interest only
         MOVE WS-DAILY-INTEREST TO LS-NEW-ACCRUED
     ELSE
         *> Normal accrual: new accrued = existing + today
         COMPUTE LS-NEW-ACCRUED =
             ACCT-ACCRUED-INT + WS-DAILY-INTEREST
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-INT-RESULT-CODE
+                MOVE "Arithmetic overflow on accrual"
+                    TO LS-INT-RESULT-MSG
+                GOBACK
+        END-COMPUTE
     END-IF
 
     *> Write back accrued interest to account record

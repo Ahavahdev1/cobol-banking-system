@@ -31,6 +31,20 @@ COPY CPYERR.
 01  WS-EXCEPTION-FLAG          PIC X(1).
 01  WS-HOLD-DAYS               PIC 9(2).
 
+*> DATEUTIL CALL fields
+01  WS-DU-FUNCTION             PIC X(4).
+01  WS-DU-DATE-INPUT.
+    05  WS-DU-DATE1            PIC 9(8).
+    05  WS-DU-DATE2            PIC 9(8).
+    05  WS-DU-DAYS-TO-ADD      PIC S9(4).
+01  WS-DU-DATE-OUTPUT.
+    05  WS-DU-RESULT-DATE      PIC 9(8).
+    05  WS-DU-RESULT-DAYS      PIC S9(8).
+    05  WS-DU-RESULT-FLAG      PIC X(1).
+01  WS-DU-DATE-RESULT.
+    05  WS-DU-DATE-RESULT-CODE PIC X(5).
+    05  WS-DU-DATE-RESULT-MSG  PIC X(50).
+
 LINKAGE SECTION.
 01  LS-HOLD-REQUEST.
     05  LS-HR-ACCT-NUMBER         PIC 9(12).
@@ -116,7 +130,9 @@ CALC-TREASURY-CASHIER.
         SUBTRACT WS-REGCC-TREASURY-AMT FROM WS-DEPOSIT-AMT
             GIVING LS-HOLD-REMAINING-AMT
     END-IF
-    MOVE LS-HR-DEPOSIT-DATE TO LS-HOLD-RELEASE-DT.
+    *> Treasury/cashier: 2 business days hold
+    MOVE 2 TO WS-HOLD-DAYS
+    PERFORM COMPUTE-RELEASE-DATE.
 
 *> ---------------------------------------------------------------
 *> Check deposits (LC, NL): $225 next-day threshold
@@ -136,7 +152,7 @@ CALC-CHECK-DEPOSIT.
     ELSE
         MOVE WS-REGCC-NONLOCAL-DAYS TO WS-HOLD-DAYS
     END-IF
-    MOVE LS-HR-DEPOSIT-DATE TO LS-HOLD-RELEASE-DT.
+    PERFORM COMPUTE-RELEASE-DATE.
 
 *> ---------------------------------------------------------------
 *> Check exception conditions (Reg CC)
@@ -173,3 +189,21 @@ CALC-DAYS-BETWEEN.
     COMPUTE WS-DAYS-DIFF =
         FUNCTION INTEGER-OF-DATE(WS-DEP-DATE-INT)
       - FUNCTION INTEGER-OF-DATE(WS-OPEN-DATE-INT).
+
+*> ---------------------------------------------------------------
+*> Compute hold release date using DATEUTIL business-day addition
+*> Input: LS-HR-DEPOSIT-DATE, WS-HOLD-DAYS
+*> Output: LS-HOLD-RELEASE-DT
+*> ---------------------------------------------------------------
+COMPUTE-RELEASE-DATE.
+    MOVE "BDAY" TO WS-DU-FUNCTION
+    MOVE LS-HR-DEPOSIT-DATE TO WS-DU-DATE1
+    MOVE 0 TO WS-DU-DATE2
+    MOVE WS-HOLD-DAYS TO WS-DU-DAYS-TO-ADD
+    INITIALIZE WS-DU-DATE-OUTPUT
+    INITIALIZE WS-DU-DATE-RESULT
+    CALL "DATEUTIL" USING WS-DU-FUNCTION
+                          WS-DU-DATE-INPUT
+                          WS-DU-DATE-OUTPUT
+                          WS-DU-DATE-RESULT
+    MOVE WS-DU-RESULT-DATE TO LS-HOLD-RELEASE-DT.

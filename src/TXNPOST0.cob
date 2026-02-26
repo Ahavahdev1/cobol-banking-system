@@ -105,8 +105,20 @@ CAPTURE-BEFORE-SNAPSHOT.
 POST-TRANSACTION.
     IF TXN-DR-CR = "C"
         ADD TXN-AMOUNT TO ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-TXN-RESULT-CODE
+                MOVE "Arithmetic overflow on deposit"
+                    TO LS-TXN-RESULT-MSG
+                GOBACK
+        END-ADD
     ELSE
         SUBTRACT TXN-AMOUNT FROM ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-TXN-RESULT-CODE
+                MOVE "Arithmetic overflow on withdrawal"
+                    TO LS-TXN-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
     END-IF.
 
 *> ---------------------------------------------------------------
@@ -114,7 +126,13 @@ POST-TRANSACTION.
 *> ---------------------------------------------------------------
 UPDATE-AVAILABLE-BALANCE.
     COMPUTE ACCT-AVAIL-BAL =
-        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT.
+        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-TXN-RESULT-CODE
+            MOVE "Arithmetic overflow on available balance"
+                TO LS-TXN-RESULT-MSG
+            GOBACK
+    END-COMPUTE.
 
 *> ---------------------------------------------------------------
 *> Capture balance snapshots after posting
