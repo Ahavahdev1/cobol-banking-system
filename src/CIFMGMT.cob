@@ -93,7 +93,7 @@ VALIDATE-CIF.
     END-IF
 
     IF CIF-DOB = 0
-        MOVE "E0030" TO LS-CIF-RESULT-CODE
+        MOVE "E0046" TO LS-CIF-RESULT-CODE
         MOVE "Invalid or missing date of birth"
             TO LS-CIF-RESULT-MSG
         EXIT PARAGRAPH
@@ -130,6 +130,13 @@ INIT-CIF.
     MOVE WS-CURRENT-DATE TO CIF-CREATED-DATE
     MOVE WS-CURRENT-TIME TO CIF-CREATED-TIME
     MOVE "N" TO CIF-CIP-VERIFIED
+
+    *> Initialize date fields to prevent garbage values
+    MOVE 0 TO CIF-CIP-VERIFY-DATE
+    MOVE 0 TO CIF-CIP-DOC-EXPIRY
+    MOVE 0 TO CIF-OFAC-CHECK-DATE
+    MOVE 0 TO CIF-LAST-CONTACT-DATE
+    MOVE 0 TO CIF-DOB
 
     *> Initialize regulatory fields to safe defaults
     MOVE 1 TO CIF-BSA-RISK-RATING

@@ -60,7 +60,7 @@ ODMGMT0-MAIN.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-OD-RESULT-CODE
+        MOVE "E0044" TO LS-OD-RESULT-CODE
         MOVE "Account is escheated" TO LS-OD-RESULT-MSG
         GOBACK
     END-IF

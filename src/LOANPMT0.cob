@@ -72,7 +72,7 @@ PROCESS-PAYMENT.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "E0044" TO LS-LOAN-RESULT-CODE
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
@@ -202,6 +202,8 @@ PROCESS-PAYMENT.
     END-IF
     *> Reset late fee flag for next cycle
     MOVE "N" TO ACCT-LATE-FEE-ASSESSED
+    *> Update last transaction date for dormancy tracking
+    MOVE LS-PAYMENT-DATE TO ACCT-LAST-TXN-DATE
     *> Set result
     MOVE WS-INT-PORTION TO LS-LOAN-INT-PORTION
     MOVE WS-PRIN-PORTION TO LS-LOAN-PRIN-PORTION
@@ -225,7 +227,7 @@ CHECK-LATE.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "E0044" TO LS-LOAN-RESULT-CODE
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
@@ -266,7 +268,7 @@ CALC-PAYOFF.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "E0044" TO LS-LOAN-RESULT-CODE
         MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF

@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-CIFMGMT.
 *> ================================================================
 *> TEST-CIFMGMT - Test suite for CIFMGMT CIF management
-*> Tests: VALD, INIT functions (16 tests)
+*> Tests: VALD, INIT functions (18 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -47,6 +47,7 @@ MAIN-PROGRAM.
     PERFORM TEST-CF-015
     PERFORM TEST-CF-016
     PERFORM TEST-CF-017
+    PERFORM TEST-CF-018
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -567,11 +568,11 @@ TEST-CF-016.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> CF-017: VALD with zero DOB -> E0030
+*> CF-017: VALD with zero DOB -> E0046
 *> ---------------------------------------------------------------
 TEST-CF-017.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "CF-017: VALD zero DOB=E0030" TO WS-TEST-NAME
+    MOVE "CF-017: VALD zero DOB=E0046" TO WS-TEST-NAME
     INITIALIZE CIF-RECORD
     INITIALIZE WS-CIF-RESULT
     MOVE "VALD" TO WS-FUNCTION
@@ -588,11 +589,58 @@ TEST-CF-017.
     MOVE "A" TO CIF-STATUS
     CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
                          WS-CIF-RESULT
-    IF WS-CIF-RESULT-CODE = "E0030"
+    IF WS-CIF-RESULT-CODE = "E0046"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0030 actual=" WS-CIF-RESULT-CODE
+            " expected=E0046 actual=" WS-CIF-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> CF-018: INIT-CIF initializes date fields to 0
+*>         Pre-set CIF-CIP-DOC-EXPIRY to garbage, verify zeroed
+*> ---------------------------------------------------------------
+TEST-CF-018.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "CF-018: INIT zeros date fields" TO WS-TEST-NAME
+    INITIALIZE CIF-RECORD
+    INITIALIZE WS-CIF-RESULT
+    MOVE "INIT" TO WS-FUNCTION
+    MOVE 1000000018 TO CIF-CUST-ID
+    MOVE "DATEINIT" TO CIF-NAME-LAST
+    MOVE "TEST" TO CIF-NAME-FIRST
+    MOVE 667788990 TO CIF-SSN-TIN
+    MOVE "S" TO CIF-SSN-TYPE
+    MOVE "I" TO CIF-CUST-TYPE
+    *> Pre-set date fields to garbage values
+    MOVE 99991231 TO CIF-CIP-DOC-EXPIRY
+    MOVE 99991231 TO CIF-CIP-VERIFY-DATE
+    MOVE 99991231 TO CIF-OFAC-CHECK-DATE
+    MOVE 99991231 TO CIF-LAST-CONTACT-DATE
+    MOVE 19900101 TO CIF-DOB
+    CALL "CIFMGMT" USING WS-FUNCTION CIF-RECORD
+                         WS-CIF-RESULT
+    IF WS-CIF-RESULT-CODE = "E0000"
+        IF CIF-CIP-DOC-EXPIRY = 0
+            AND CIF-CIP-VERIFY-DATE = 0
+            AND CIF-OFAC-CHECK-DATE = 0
+            AND CIF-LAST-CONTACT-DATE = 0
+            AND CIF-DOB = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " expiry=" CIF-CIP-DOC-EXPIRY
+                " verify=" CIF-CIP-VERIFY-DATE
+                " ofac=" CIF-OFAC-CHECK-DATE
+                " contact=" CIF-LAST-CONTACT-DATE
+                " dob=" CIF-DOB
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-CIF-RESULT-CODE
     END-IF.

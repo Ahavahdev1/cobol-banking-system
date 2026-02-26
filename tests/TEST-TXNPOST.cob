@@ -1248,11 +1248,11 @@ TEST-TP-037.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> TP-038: Escheated account returns E0050
+*> TP-038: Escheated account returns E0044
 *> ---------------------------------------------------------------
 TEST-TP-038.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "TP-038: Escheated account -> E0050" TO WS-TEST-NAME
+    MOVE "TP-038: Escheated account -> E0044" TO WS-TEST-NAME
     PERFORM SETUP-ACTIVE-CHECKING
     MOVE 5000.00 TO ACCT-LEDGER-BAL
     MOVE 5000.00 TO ACCT-AVAIL-BAL
@@ -1264,7 +1264,7 @@ TEST-TP-038.
     MOVE 0 TO TXN-CASH-AMOUNT
     CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
                           WS-GL-ENTRIES WS-TXN-RESULT
-    IF WS-TXN-RESULT-CODE = "E0050"
+    IF WS-TXN-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE

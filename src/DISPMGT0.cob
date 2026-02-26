@@ -167,7 +167,7 @@ DO-PROVISIONAL-CREDIT.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-DSP-RESULT-CODE
+        MOVE "E0044" TO LS-DSP-RESULT-CODE
         MOVE "Account escheated - cannot issue credit"
             TO LS-DSP-RESULT-MSG
         GOBACK

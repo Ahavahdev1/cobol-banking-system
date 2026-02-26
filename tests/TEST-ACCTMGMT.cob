@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (22 tests)
+*> Tests: OPEN, CLOS, CHKD functions (26 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +48,10 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-020
     PERFORM TEST-AM-021
     PERFORM TEST-AM-022
+    PERFORM TEST-AM-023
+    PERFORM TEST-AM-024
+    PERFORM TEST-AM-025
+    PERFORM TEST-AM-026
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -691,4 +695,135 @@ TEST-AM-022.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-023: OPEN initializes ACCT-LAST-TXN-DATE = 0
+*> Prevents garbage in dormancy detection field
+*> ---------------------------------------------------------------
+TEST-AM-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-023: OPEN inits LAST-TXN-DATE=0" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    *> Pre-set LAST-TXN-DATE to garbage to verify it gets zeroed
+    MOVE 99999999 TO ACCT-LAST-TXN-DATE
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-LAST-TXN-DATE = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " LAST-TXN-DATE=" ACCT-LAST-TXN-DATE
+                " expected=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-024: OPEN initializes fee tracking fields = 0
+*> ---------------------------------------------------------------
+TEST-AM-024.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-024: OPEN inits fee fields=0" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    *> Pre-set fee fields to garbage
+    MOVE 999.99 TO ACCT-YTD-FEES-CHARGED
+    MOVE 888.88 TO ACCT-YTD-FEES-WAIVED
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-YTD-FEES-CHARGED = 0
+            AND ACCT-YTD-FEES-WAIVED = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " charged=" ACCT-YTD-FEES-CHARGED
+                " waived=" ACCT-YTD-FEES-WAIVED
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-025: OPEN initializes Reg D counter = 0
+*> ---------------------------------------------------------------
+TEST-AM-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-025: OPEN inits RegD counter=0" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    *> Pre-set Reg D counter to garbage
+    MOVE 99 TO ACCT-OL-TXN-COUNT-MTD
+    MOVE "OPEN" TO WS-FUNCTION
+    MOVE "SAV1" TO ACCT-PRODUCT-CODE
+    MOVE 1000000001 TO ACCT-PRIMARY-CIF
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0000"
+        IF ACCT-OL-TXN-COUNT-MTD = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " OL-TXN-COUNT=" ACCT-OL-TXN-COUNT-MTD
+                " expected=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-026: CLOS rejects garnished account -> E0045
+*> Closing a garnished account violates the court order
+*> ---------------------------------------------------------------
+TEST-AM-026.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-026: CLOS garnished=E0045" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "A" TO ACCT-STATUS
+    MOVE "Y" TO ACCT-GARNISHMENT
+    MOVE 0 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE 0 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0045"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0045 actual=" WS-ACCT-RESULT-CODE
     END-IF.

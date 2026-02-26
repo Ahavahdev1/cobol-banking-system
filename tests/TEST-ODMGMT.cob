@@ -738,11 +738,11 @@ TEST-OD-017.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> OD-018: Escheated account -> E0050
+*> OD-018: Escheated account -> E0044
 *> ---------------------------------------------------------------
 TEST-OD-018.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "OD-018: Escheated acct -> E0050" TO WS-TEST-NAME
+    MOVE "OD-018: Escheated acct -> E0044" TO WS-TEST-NAME
     INITIALIZE ACCT-RECORD
     INITIALIZE WS-OD-REQUEST
     INITIALIZE WS-OD-RESULT
@@ -762,11 +762,11 @@ TEST-OD-018.
     MOVE "WDL" TO WS-OD-TXN-TYPE
     MOVE 20260215 TO WS-OD-CURRENT-DATE
     CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
-    IF WS-OD-RESULT-CODE = "E0050"
+    IF WS-OD-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " rc=" WS-OD-RESULT-CODE " expected=E0050"
+            " rc=" WS-OD-RESULT-CODE " expected=E0044"
     END-IF.

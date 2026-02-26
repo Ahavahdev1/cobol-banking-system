@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-LOANPMT.
 *> ================================================================
 *> TEST-LOANPMT - Test suite for LOANPMT0 Loan Payment Processor
-*> Tests: Payments, late checks, payoff, edge cases (23 tests)
+*> Tests: Payments, late checks, payoff, edge cases (24 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -55,6 +55,7 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-031
     PERFORM TEST-LP-032
     PERFORM TEST-LP-033
+    PERFORM TEST-LP-034
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -791,11 +792,11 @@ TEST-LP-030.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> LP-031: PMNT on escheated loan returns E0050
+*> LP-031: PMNT on escheated loan returns E0044
 *> ---------------------------------------------------------------
 TEST-LP-031.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "LP-031: PMNT escheated loan=E0050"
+    MOVE "LP-031: PMNT escheated loan=E0044"
         TO WS-TEST-NAME
     PERFORM SETUP-LOAN-ACCOUNT
     MOVE "L" TO ACCT-TYPE
@@ -809,21 +810,21 @@ TEST-LP-031.
     CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
                           WS-PAYMENT-AMT WS-PAYMENT-DATE
                           WS-LOAN-RESULT
-    IF WS-LOAN-RESULT-CODE = "E0050"
+    IF WS-LOAN-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0050 actual=" WS-LOAN-RESULT-CODE
+            " expected=E0044 actual=" WS-LOAN-RESULT-CODE
     END-IF.
 
 *> ---------------------------------------------------------------
-*> LP-032: LATE on escheated account -> E0050
+*> LP-032: LATE on escheated account -> E0044
 *> ---------------------------------------------------------------
 TEST-LP-032.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "LP-032: LATE escheated loan=E0050"
+    MOVE "LP-032: LATE escheated loan=E0044"
         TO WS-TEST-NAME
     PERFORM SETUP-LOAN-ACCOUNT
     MOVE "L" TO ACCT-TYPE
@@ -835,21 +836,21 @@ TEST-LP-032.
     CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
                           WS-PAYMENT-AMT WS-PAYMENT-DATE
                           WS-LOAN-RESULT
-    IF WS-LOAN-RESULT-CODE = "E0050"
+    IF WS-LOAN-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0050 actual=" WS-LOAN-RESULT-CODE
+            " expected=E0044 actual=" WS-LOAN-RESULT-CODE
     END-IF.
 
 *> ---------------------------------------------------------------
-*> LP-033: POFF on escheated account -> E0050
+*> LP-033: POFF on escheated account -> E0044
 *> ---------------------------------------------------------------
 TEST-LP-033.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "LP-033: POFF escheated loan=E0050"
+    MOVE "LP-033: POFF escheated loan=E0044"
         TO WS-TEST-NAME
     PERFORM SETUP-LOAN-ACCOUNT
     MOVE "L" TO ACCT-TYPE
@@ -861,11 +862,43 @@ TEST-LP-033.
     CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
                           WS-PAYMENT-AMT WS-PAYMENT-DATE
                           WS-LOAN-RESULT
-    IF WS-LOAN-RESULT-CODE = "E0050"
+    IF WS-LOAN-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " expected=E0050 actual=" WS-LOAN-RESULT-CODE
+            " expected=E0044 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-034: PMNT updates ACCT-LAST-TXN-DATE for dormancy tracking
+*> ---------------------------------------------------------------
+TEST-LP-034.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-034: PMNT sets LAST-TXN-DATE"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    MOVE 0 TO ACCT-LAST-TXN-DATE
+    INITIALIZE WS-LOAN-RESULT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-LAST-TXN-DATE = 20260315
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " last-txn=" ACCT-LAST-TXN-DATE
+                " expected=20260315"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
     END-IF.

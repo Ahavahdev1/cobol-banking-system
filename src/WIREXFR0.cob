@@ -77,7 +77,7 @@ PROCESS-SEND.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "E0044" TO LS-WIRE-RESULT-CODE
         MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
@@ -184,7 +184,7 @@ PROCESS-RECV.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "E0044" TO LS-WIRE-RESULT-CODE
         MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
@@ -271,7 +271,7 @@ PROCESS-REVERSE.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-WIRE-RESULT-CODE
+        MOVE "E0044" TO LS-WIRE-RESULT-CODE
         MOVE "Account is escheated" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF

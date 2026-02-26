@@ -96,7 +96,7 @@ VALIDATE-ACCOUNT-STATUS.
         GOBACK
     END-IF
     IF ACCT-STATUS = "E"
-        MOVE "E0050" TO LS-TXN-RESULT-CODE
+        MOVE "E0044" TO LS-TXN-RESULT-CODE
         MOVE "Account is escheated" TO LS-TXN-RESULT-MSG
         GOBACK
     END-IF

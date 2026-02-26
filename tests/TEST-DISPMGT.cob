@@ -805,12 +805,12 @@ TEST-DP-020.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> DP-021: PROV on escheated account -> E0050
+*> DP-021: PROV on escheated account -> E0044
 *> File dispute first, then set account to escheated, call PROV
 *> ---------------------------------------------------------------
 TEST-DP-021.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "DP-021: PROV escheated account -> E0050"
+    MOVE "DP-021: PROV escheated account -> E0044"
         TO WS-TEST-NAME
     INITIALIZE DISPUTE-RECORD
     INITIALIZE ACCT-RECORD
@@ -833,11 +833,11 @@ TEST-DP-021.
     INITIALIZE WS-DSP-RESULT
     CALL "DISPMGT0" USING WS-DSP-FUNCTION DISPUTE-RECORD
                           ACCT-RECORD WS-DSP-RESULT
-    IF WS-DSP-RESULT-CODE = "E0050"
+    IF WS-DSP-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
-            " rc=" WS-DSP-RESULT-CODE " expected=E0050"
+            " rc=" WS-DSP-RESULT-CODE " expected=E0044"
     END-IF.

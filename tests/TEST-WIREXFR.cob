@@ -1347,11 +1347,11 @@ TEST-WR-028.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> WR-029: SEND on escheated account -> E0050
+*> WR-029: SEND on escheated account -> E0044
 *> ---------------------------------------------------------------
 TEST-WR-029.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "WR-029: SEND escheated acct -> E0050" TO WS-TEST-NAME
+    MOVE "WR-029: SEND escheated acct -> E0044" TO WS-TEST-NAME
     INITIALIZE WS-WIRE-RECORD
     INITIALIZE WS-ACCT-RECORD
     INITIALIZE WS-WIRE-RESULT
@@ -1376,7 +1376,7 @@ TEST-WR-029.
                           WS-WIRE-RECORD
                           WS-ACCT-RECORD
                           WS-WIRE-RESULT
-    IF WS-WIRE-RESULT-CODE = "E0050"
+    IF WS-WIRE-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
@@ -1464,11 +1464,11 @@ TEST-WR-031.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> WR-032: RECV on escheated account -> E0050
+*> WR-032: RECV on escheated account -> E0044
 *> ---------------------------------------------------------------
 TEST-WR-032.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "WR-032: RECV escheated account -> E0050"
+    MOVE "WR-032: RECV escheated account -> E0044"
         TO WS-TEST-NAME
     INITIALIZE WS-WIRE-RECORD
     INITIALIZE WS-ACCT-RECORD
@@ -1493,14 +1493,14 @@ TEST-WR-032.
                           WS-WIRE-RECORD
                           WS-ACCT-RECORD
                           WS-WIRE-RESULT
-    IF WS-WIRE-RESULT-CODE = "E0050"
+    IF WS-WIRE-RESULT-CODE = "E0044"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
-            " expected=E0050"
+            " expected=E0044"
     END-IF.
 
 *> ---------------------------------------------------------------

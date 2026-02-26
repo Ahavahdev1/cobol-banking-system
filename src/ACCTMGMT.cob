@@ -97,6 +97,24 @@ OPEN-ACCOUNT.
     MOVE 0 TO ACCT-STOP-PAYS-ACTIVE
     MOVE "N" TO ACCT-LATE-FEE-ASSESSED
 
+    *> Date fields (prevent garbage affecting dormancy detection)
+    MOVE 0 TO ACCT-CLOSE-DATE
+    MOVE 0 TO ACCT-MATURITY-DATE
+    MOVE 0 TO ACCT-LAST-TXN-DATE
+    MOVE 0 TO ACCT-LAST-STMT-DATE
+    MOVE 0 TO ACCT-NEXT-STMT-DATE
+    MOVE 0 TO ACCT-STMT-CYCLE
+
+    *> Fee tracking (prevent corrupted YTD totals)
+    MOVE 0 TO ACCT-MONTHLY-FEE
+    MOVE "NW" TO ACCT-FEE-WAIVER-CODE
+    MOVE 0 TO ACCT-FEE-WAIVER-AMT
+    MOVE 0 TO ACCT-YTD-FEES-CHARGED
+    MOVE 0 TO ACCT-YTD-FEES-WAIVED
+
+    *> Reg D transfer counter
+    MOVE 0 TO ACCT-OL-TXN-COUNT-MTD
+
     MOVE "E0000" TO LS-ACCT-RESULT-CODE
     MOVE "Account opened successfully" TO LS-ACCT-RESULT-MSG.
 
@@ -114,6 +132,13 @@ CLOSE-ACCOUNT.
     IF ACCT-LEGAL-HOLD = "Y"
         MOVE "E0035" TO LS-ACCT-RESULT-CODE
         MOVE "Cannot close account under legal hold"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
+    IF ACCT-GARNISHMENT = "Y"
+        MOVE "E0045" TO LS-ACCT-RESULT-CODE
+        MOVE "Cannot close account under garnishment"
             TO LS-ACCT-RESULT-MSG
         EXIT PARAGRAPH
     END-IF

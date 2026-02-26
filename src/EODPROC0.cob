@@ -346,6 +346,9 @@ ADVANCE-NEXT-PAY-DATE.
             WS-NP-YYYY * 10000
             + WS-NP-MM * 100
             + WS-NP-DD
+            ON SIZE ERROR
+                ADD 1 TO WS-ACCTS-ERRORS
+        END-COMPUTE
     END-IF.
 
 *> ---------------------------------------------------------------
