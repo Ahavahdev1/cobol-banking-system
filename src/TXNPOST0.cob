@@ -206,6 +206,8 @@ UPDATE-AVAILABLE-BALANCE.
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
         ON SIZE ERROR
+            *> Rollback ledger balance to pre-POST snapshot
+            MOVE TXN-BAL-BEFORE TO ACCT-LEDGER-BAL
             MOVE "E0040" TO LS-TXN-RESULT-CODE
             MOVE "Arithmetic overflow on available balance"
                 TO LS-TXN-RESULT-MSG

@@ -38,6 +38,7 @@ WORKING-STORAGE SECTION.
 
 *> Working fields for RSLV partial credit adjustment
 01  WS-REVERSE-AMT             PIC S9(13)V99.
+01  WS-SAVE-LEDGER-BAL         PIC S9(13)V99.
 
 LINKAGE SECTION.
 01  LS-DSP-FUNCTION            PIC X(4).
@@ -176,6 +177,7 @@ DO-PROVISIONAL-CREDIT.
     MOVE WS-TODAY-DATE TO DSP-PROVISIONAL-DATE
 
     *> Credit account (before setting status to avoid inconsistency)
+    MOVE ACCT-LEDGER-BAL TO WS-SAVE-LEDGER-BAL
     ADD DSP-PROVISIONAL-AMT TO ACCT-LEDGER-BAL
         ON SIZE ERROR
             MOVE "E0040" TO LS-DSP-RESULT-CODE
@@ -186,6 +188,7 @@ DO-PROVISIONAL-CREDIT.
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
         ON SIZE ERROR
+            MOVE WS-SAVE-LEDGER-BAL TO ACCT-LEDGER-BAL
             MOVE "E0040" TO LS-DSP-RESULT-CODE
             MOVE "Arithmetic overflow on available balance"
                 TO LS-DSP-RESULT-MSG
@@ -232,6 +235,7 @@ DO-RESOLVE-DISPUTE.
         WHEN "DN"
             *> Denied: reverse provisional credit
             IF DSP-PROVISIONAL-AMT > 0
+                MOVE ACCT-LEDGER-BAL TO WS-SAVE-LEDGER-BAL
                 SUBTRACT DSP-PROVISIONAL-AMT FROM ACCT-LEDGER-BAL
                     ON SIZE ERROR
                         MOVE "E0040" TO LS-DSP-RESULT-CODE
@@ -242,6 +246,7 @@ DO-RESOLVE-DISPUTE.
                 COMPUTE ACCT-AVAIL-BAL =
                     ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
                     ON SIZE ERROR
+                        MOVE WS-SAVE-LEDGER-BAL TO ACCT-LEDGER-BAL
                         MOVE "E0040" TO LS-DSP-RESULT-CODE
                         MOVE "Arithmetic overflow on available balance"
                             TO LS-DSP-RESULT-MSG
@@ -262,6 +267,7 @@ DO-RESOLVE-DISPUTE.
                             TO LS-DSP-RESULT-MSG
                         GOBACK
                 END-COMPUTE
+                MOVE ACCT-LEDGER-BAL TO WS-SAVE-LEDGER-BAL
                 SUBTRACT WS-REVERSE-AMT FROM ACCT-LEDGER-BAL
                     ON SIZE ERROR
                         MOVE "E0040" TO LS-DSP-RESULT-CODE
@@ -272,6 +278,7 @@ DO-RESOLVE-DISPUTE.
                 COMPUTE ACCT-AVAIL-BAL =
                     ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
                     ON SIZE ERROR
+                        MOVE WS-SAVE-LEDGER-BAL TO ACCT-LEDGER-BAL
                         MOVE "E0040" TO LS-DSP-RESULT-CODE
                         MOVE "Arithmetic overflow on available balance"
                             TO LS-DSP-RESULT-MSG

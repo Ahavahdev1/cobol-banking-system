@@ -9,6 +9,7 @@ DATA DIVISION.
 WORKING-STORAGE SECTION.
 01  WS-IS-CREDIT           PIC X(1).
 01  WS-IS-DEBIT            PIC X(1).
+01  WS-SAVE-LEDGER-BAL     PIC S9(13)V99.
 
 *> Reg D check linkage areas
 01  WS-REGD-REQUEST.
@@ -243,6 +244,7 @@ CHECK-FUNDS.
 *> PROCESS-TRANSACTION - Apply credit or debit to account
 *> ---------------------------------------------------------------
 PROCESS-TRANSACTION.
+    MOVE ACCT-LEDGER-BAL TO WS-SAVE-LEDGER-BAL
     IF WS-IS-CREDIT = "Y"
         ADD LS-ACH-AMOUNT TO ACCT-LEDGER-BAL
             ON SIZE ERROR
@@ -265,6 +267,7 @@ PROCESS-TRANSACTION.
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
         ON SIZE ERROR
+            MOVE WS-SAVE-LEDGER-BAL TO ACCT-LEDGER-BAL
             MOVE "E0040" TO LS-ACH-RESULT-CODE
             MOVE "ACH overflow on balance"
                 TO LS-ACH-RESULT-MSG

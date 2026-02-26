@@ -224,6 +224,11 @@ CHECK-LATE.
         MOVE "Account is closed" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
     IF ACCT-NEXT-PMT-DATE > 0
         AND LS-PAYMENT-DATE > ACCT-NEXT-PMT-DATE
         *> Payment is past due - compute actual days late
@@ -258,6 +263,11 @@ CALC-PAYOFF.
     IF ACCT-STATUS = "C"
         MOVE "E0011" TO LS-LOAN-RESULT-CODE
         MOVE "Account is closed" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-STATUS = "E"
+        MOVE "E0050" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is escheated" TO LS-LOAN-RESULT-MSG
         GOBACK
     END-IF
     MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
