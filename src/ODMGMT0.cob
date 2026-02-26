@@ -81,6 +81,12 @@ ODMGMT0-MAIN.
             TO LS-OD-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-STATUS = "D"
+        MOVE "E0013" TO LS-OD-RESULT-CODE
+        MOVE "Account is dormant - OD blocked"
+            TO LS-OD-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Determine effective balance
     MOVE ACCT-AVAIL-BAL TO WS-EFFECTIVE-BAL

@@ -58,6 +58,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-020
     PERFORM TEST-OD-021
     PERFORM TEST-OD-022
+    PERFORM TEST-OD-023
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -930,4 +931,44 @@ TEST-OD-022.
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-OD-RESULT-CODE
             " expected=E0014"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-023: Dormant account -> E0013
+*> OD extends credit (debit), dormant blocks debits
+*> Prevents phantom NSF counter inflation on dormant accounts
+*> ---------------------------------------------------------------
+TEST-OD-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-023: Dormant acct -> E0013" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "D" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-YTD
+    MOVE 150.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    IF WS-OD-RESULT-CODE = "E0013"
+        AND ACCT-NSF-COUNT-TODAY = 0
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
+            " expected=E0013 nsf-today="
+            ACCT-NSF-COUNT-TODAY
     END-IF.
