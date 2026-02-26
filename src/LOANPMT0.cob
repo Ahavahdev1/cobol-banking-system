@@ -1,0 +1,193 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. LOANPMT0.
+*> ================================================================
+*> LOANPMT0 - Loan Payment Processor
+*> Processes loan payments, late checks, payoff calcs, status
+*> ================================================================
+
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01  WS-INT-PORTION             PIC S9(13)V99.
+01  WS-PRIN-PORTION            PIC S9(13)V99.
+01  WS-REMAINING-INT           PIC S9(11)V9(6).
+01  WS-PAYOFF-AMT              PIC S9(13)V99.
+01  WS-ACCRUED-INT-2DP         PIC S9(13)V99.
+01  WS-NEXT-PMT-YYYY           PIC 9(4).
+01  WS-NEXT-PMT-MM             PIC 9(2).
+01  WS-NEXT-PMT-DD             PIC 9(2).
+01  WS-NEXT-PMT-WORK           PIC 9(8).
+01  WS-DAYS-LATE               PIC 9(4).
+
+LINKAGE SECTION.
+01  LS-LOAN-FUNCTION           PIC X(4).
+COPY CPYACCT.
+01  LS-PAYMENT-AMT             PIC S9(13)V99.
+01  LS-PAYMENT-DATE            PIC 9(8).
+01  LS-LOAN-RESULT.
+    05  LS-LOAN-RESULT-CODE    PIC X(5).
+    05  LS-LOAN-RESULT-MSG     PIC X(50).
+    05  LS-LOAN-INT-PORTION    PIC S9(13)V99.
+    05  LS-LOAN-PRIN-PORTION   PIC S9(13)V99.
+    05  LS-LOAN-NEW-BALANCE    PIC S9(13)V99.
+
+PROCEDURE DIVISION USING LS-LOAN-FUNCTION
+                         ACCT-RECORD
+                         LS-PAYMENT-AMT
+                         LS-PAYMENT-DATE
+                         LS-LOAN-RESULT.
+MAIN-LOGIC.
+    INITIALIZE LS-LOAN-RESULT
+    EVALUATE LS-LOAN-FUNCTION
+        WHEN "PMNT"
+            PERFORM PROCESS-PAYMENT
+        WHEN "LATE"
+            PERFORM CHECK-LATE
+        WHEN "POFF"
+            PERFORM CALC-PAYOFF
+        WHEN "STAT"
+            PERFORM GET-STATUS
+        WHEN OTHER
+            MOVE "E0001" TO LS-LOAN-RESULT-CODE
+            MOVE "Invalid loan function" TO LS-LOAN-RESULT-MSG
+    END-EVALUATE
+    GOBACK.
+
+*> ---------------------------------------------------------------
+*> PMNT - Process a loan payment
+*> ---------------------------------------------------------------
+PROCESS-PAYMENT.
+    *> Validate account type is loan
+    IF ACCT-TYPE NOT = "L"
+        MOVE "E0041" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is not a loan" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    *> Validate account is active
+    IF ACCT-STATUS = "C"
+        MOVE "E0011" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is closed" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    *> Validate payment amount > 0
+    IF LS-PAYMENT-AMT <= ZERO
+        MOVE "E0002" TO LS-LOAN-RESULT-CODE
+        MOVE "Invalid input" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    *> Check if loan is already paid off
+    IF ACCT-LEDGER-BAL = ZERO AND ACCT-ACCRUED-INT = ZERO
+        MOVE "E0042" TO LS-LOAN-RESULT-CODE
+        MOVE "Loan is paid off" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    *> Truncate accrued interest to 2 decimal places for splitting
+    MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
+    *> Split payment into interest and principal
+    IF LS-PAYMENT-AMT <= WS-ACCRUED-INT-2DP
+        *> Entire payment goes to interest
+        MOVE LS-PAYMENT-AMT TO WS-INT-PORTION
+        MOVE ZERO TO WS-PRIN-PORTION
+        *> Reduce accrued interest by payment
+        SUBTRACT LS-PAYMENT-AMT FROM ACCT-ACCRUED-INT
+    ELSE
+        *> Pay all accrued interest first, rest to principal
+        MOVE WS-ACCRUED-INT-2DP TO WS-INT-PORTION
+        COMPUTE WS-PRIN-PORTION =
+            LS-PAYMENT-AMT - WS-ACCRUED-INT-2DP
+        *> Clear accrued interest
+        MOVE ZERO TO ACCT-ACCRUED-INT
+        *> Reduce loan balance by principal portion
+        SUBTRACT WS-PRIN-PORTION FROM ACCT-LEDGER-BAL
+        *> Don't let balance go negative
+        IF ACCT-LEDGER-BAL < ZERO
+            MOVE ZERO TO ACCT-LEDGER-BAL
+        END-IF
+    END-IF
+    *> Update past due status
+    MOVE ZERO TO ACCT-PAST-DUE-DAYS
+    MOVE ZERO TO ACCT-PAST-DUE-AMT
+    *> Update next payment date (add 1 month: +100 to YYYYMMDD)
+    IF ACCT-NEXT-PMT-DATE > 0
+        MOVE ACCT-NEXT-PMT-DATE TO WS-NEXT-PMT-WORK
+        DIVIDE WS-NEXT-PMT-WORK BY 10000
+            GIVING WS-NEXT-PMT-YYYY
+            REMAINDER WS-NEXT-PMT-WORK
+        DIVIDE WS-NEXT-PMT-WORK BY 100
+            GIVING WS-NEXT-PMT-MM
+            REMAINDER WS-NEXT-PMT-DD
+        ADD 1 TO WS-NEXT-PMT-MM
+        IF WS-NEXT-PMT-MM > 12
+            MOVE 1 TO WS-NEXT-PMT-MM
+            ADD 1 TO WS-NEXT-PMT-YYYY
+        END-IF
+        COMPUTE ACCT-NEXT-PMT-DATE =
+            WS-NEXT-PMT-YYYY * 10000
+            + WS-NEXT-PMT-MM * 100
+            + WS-NEXT-PMT-DD
+    END-IF
+    *> Decrement remaining term
+    IF ACCT-REMAINING-TERM > 0
+        SUBTRACT 1 FROM ACCT-REMAINING-TERM
+    END-IF
+    *> Reset late fee flag for next cycle
+    MOVE "N" TO ACCT-LATE-FEE-ASSESSED
+    *> Set result
+    MOVE WS-INT-PORTION TO LS-LOAN-INT-PORTION
+    MOVE WS-PRIN-PORTION TO LS-LOAN-PRIN-PORTION
+    MOVE ACCT-LEDGER-BAL TO LS-LOAN-NEW-BALANCE
+    MOVE "E0000" TO LS-LOAN-RESULT-CODE
+    MOVE "Loan payment processed successfully"
+        TO LS-LOAN-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> LATE - Check if payment is past due
+*> ---------------------------------------------------------------
+CHECK-LATE.
+    IF ACCT-TYPE NOT = "L"
+        MOVE "E0041" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is not a loan" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-NEXT-PMT-DATE > 0
+        AND LS-PAYMENT-DATE > ACCT-NEXT-PMT-DATE
+        *> Payment is past due - compute simplified days late
+        COMPUTE WS-DAYS-LATE =
+            LS-PAYMENT-DATE - ACCT-NEXT-PMT-DATE
+        MOVE WS-DAYS-LATE TO ACCT-PAST-DUE-DAYS
+        MOVE ACCT-PAYMENT-AMT TO ACCT-PAST-DUE-AMT
+        *> Assess late fee if not already assessed
+        IF ACCT-LATE-FEE-ASSESSED = "N"
+            MOVE "Y" TO ACCT-LATE-FEE-ASSESSED
+        END-IF
+    END-IF
+    MOVE "E0000" TO LS-LOAN-RESULT-CODE
+    MOVE "Late check completed" TO LS-LOAN-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> POFF - Calculate payoff amount
+*> ---------------------------------------------------------------
+CALC-PAYOFF.
+    IF ACCT-TYPE NOT = "L"
+        MOVE "E0041" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is not a loan" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
+    COMPUTE WS-PAYOFF-AMT =
+        ACCT-LEDGER-BAL + WS-ACCRUED-INT-2DP
+    MOVE WS-PAYOFF-AMT TO LS-LOAN-NEW-BALANCE
+    MOVE "E0000" TO LS-LOAN-RESULT-CODE
+    MOVE "Payoff amount calculated" TO LS-LOAN-RESULT-MSG.
+
+*> ---------------------------------------------------------------
+*> STAT - Return loan status summary
+*> ---------------------------------------------------------------
+GET-STATUS.
+    IF ACCT-TYPE NOT = "L"
+        MOVE "E0041" TO LS-LOAN-RESULT-CODE
+        MOVE "Account is not a loan" TO LS-LOAN-RESULT-MSG
+        GOBACK
+    END-IF
+    MOVE ACCT-LEDGER-BAL TO LS-LOAN-NEW-BALANCE
+    MOVE "E0000" TO LS-LOAN-RESULT-CODE
+    MOVE "Loan status retrieved" TO LS-LOAN-RESULT-MSG.

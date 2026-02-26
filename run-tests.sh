@@ -90,6 +90,9 @@ echo "=== PHASE 3: PAYMENTS + INTEGRATION ==="
 compile_and_run "TEST-ACHRECV" "ACHRECV0" "AUDTLOG0" "REGDCHK0"
 compile_and_run "TEST-INTEG-EOD" "TXNPOST0" "INTCALC0" "GLPOST0" \
     "HOLDCALC0" "DATEUTIL" "ODMGMT0" "BSACTRO" "FEECALC0"
+compile_and_run "TEST-INTEG-FULL" "TXNPOST0" "INTCALC0" "FEECALC0" "ACHRECV0" \
+    "WIREXFR0" "OFACCHK0" "HOLDCALC0" "DATEUTIL" "BSACTRO" "GLPOST0" \
+    "AUDTLOG0" "REGDCHK0"
 
 # Phase 4: Production Hardening Tests
 echo ""
@@ -112,6 +115,9 @@ compile_and_run "TEST-APYCALC" "APYCALC0"
 compile_and_run "TEST-OFAC" "OFACCHK0"
 compile_and_run "TEST-WIREXFR" "WIREXFR0" "OFACCHK0"
 compile_and_run "TEST-CTRFIL" "CTRFIL0"
+compile_and_run "TEST-SARFIL" "SARFIL0"
+compile_and_run "TEST-DORMANT" "DORMANT0"
+compile_and_run "TEST-LOANPMT" "LOANPMT0"
 
 # Summary
 echo ""

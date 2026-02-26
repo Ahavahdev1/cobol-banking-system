@@ -80,6 +80,9 @@
     *> OD errors
     05  ERR-OD-NOT-OPTED-IN       PIC X(5) VALUE "E0095".
     05  ERR-OD-LIMIT-EXCEEDED     PIC X(5) VALUE "E0096".
+    *> Loan errors
+    05  ERR-LOAN-NOT-LOAN         PIC X(5) VALUE "E0041".
+    05  ERR-LOAN-PAID-OFF         PIC X(5) VALUE "E0042".
     *> Wire transfer errors
     05  ERR-WIRE-INSUF-FUNDS      PIC X(5) VALUE "E0097".
     05  ERR-WIRE-APPROVAL-REQ     PIC X(5) VALUE "E0098".
