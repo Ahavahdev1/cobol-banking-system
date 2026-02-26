@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (26 tests)
+*> Tests: OPEN, CLOS, CHKD functions (27 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-024
     PERFORM TEST-AM-025
     PERFORM TEST-AM-026
+    PERFORM TEST-AM-027
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -826,4 +827,35 @@ TEST-AM-026.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0045 actual=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-027: CLOS rejects account with unposted accrued interest
+*> Prevents silent loss of interest owed to/from customer
+*> ---------------------------------------------------------------
+TEST-AM-027.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-027: CLOS accrued-int!=0 -> E0047" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "A" TO ACCT-STATUS
+    MOVE 0 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE 0 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "N" TO ACCT-GARNISHMENT
+    *> Account has accrued interest that hasn't been posted
+    MOVE 25.123456 TO ACCT-ACCRUED-INT
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0047"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0047 actual=" WS-ACCT-RESULT-CODE
     END-IF.

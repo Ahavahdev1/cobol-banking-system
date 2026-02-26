@@ -107,6 +107,7 @@ COPY CPYAUDT.
 01  WS-SAVE-YTD-INT-PAID       PIC S9(11)V99.
 01  WS-SAVE-YTD-INT-EARNED     PIC S9(11)V9(6).
 01  WS-SAVE-PTD-INT-EARNED     PIC S9(11)V9(6).
+01  WS-SAVE-NP-DATE             PIC 9(8).
 
 *> Batch control
 01  WS-ACCTS-PROCESSED        PIC 9(8) VALUE 0.
@@ -309,6 +310,8 @@ ADVANCE-NEXT-PAY-DATE.
             *> Skip date arithmetic for at-maturity frequency
             GO TO ADVANCE-NEXT-PAY-DATE-EXIT
         END-IF
+        *> Save original date for rollback on overflow
+        MOVE ACCT-INT-NEXT-PAY-DATE TO WS-SAVE-NP-DATE
         *> Decompose YYYYMMDD into parts
         MOVE ACCT-INT-NEXT-PAY-DATE TO WS-NP-DATE
         DIVIDE WS-NP-DATE BY 10000
@@ -359,6 +362,7 @@ ADVANCE-NEXT-PAY-DATE.
             + WS-NP-MM * 100
             + WS-NP-DD
             ON SIZE ERROR
+                MOVE WS-SAVE-NP-DATE TO ACCT-INT-NEXT-PAY-DATE
                 ADD 1 TO WS-ACCTS-ERRORS
         END-COMPUTE
     END-IF.

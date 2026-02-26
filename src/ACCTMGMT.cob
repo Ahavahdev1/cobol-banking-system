@@ -179,6 +179,13 @@ CLOSE-ACCOUNT.
         EXIT PARAGRAPH
     END-IF
 
+    IF ACCT-ACCRUED-INT NOT = 0
+        MOVE "E0047" TO LS-ACCT-RESULT-CODE
+        MOVE "Account has unposted accrued interest"
+            TO LS-ACCT-RESULT-MSG
+        EXIT PARAGRAPH
+    END-IF
+
     IF ACCT-HOLD-AMOUNT NOT = 0
         MOVE "E0017" TO LS-ACCT-RESULT-CODE
         MOVE "Account has active holds" TO LS-ACCT-RESULT-MSG
