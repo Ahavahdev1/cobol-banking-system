@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-TXNPOST.
 *> ================================================================
 *> TEST-TXNPOST - Test suite for TXNPOST0 transaction posting
-*> Tests: Deposits, withdrawals, GL mappings, compliance (32 tests)
+*> Tests: Deposits, withdrawals, GL mappings, compliance (34 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -63,6 +63,8 @@ MAIN-PROGRAM.
     PERFORM TEST-TP-030
     PERFORM TEST-TP-031
     PERFORM TEST-TP-032
+    PERFORM TEST-TP-033
+    PERFORM TEST-TP-034
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1110,6 +1112,67 @@ TEST-TP-032.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " bal=" ACCT-LEDGER-BAL
                 " exp=" WS-EXPECTED-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-033: CD deposit GL: DR 1010, CR 4050
+*> ---------------------------------------------------------------
+TEST-TP-033.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-033: CD dep GL DR1010 CR4050" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CD
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 500.00 TO TXN-AMOUNT
+    MOVE 500.00 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF WS-GL-DR-ACCOUNT = 1010
+            AND WS-GL-CR-ACCOUNT = 4050
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " DR=" WS-GL-DR-ACCOUNT
+                " CR=" WS-GL-CR-ACCOUNT
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " result=" WS-TXN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> TP-034: Unknown sub-type "XX" deposit GL uses suspense 9999
+*> ---------------------------------------------------------------
+TEST-TP-034.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "TP-034: XX subtype GL CR=9999" TO WS-TEST-NAME
+    PERFORM SETUP-ACTIVE-CHECKING
+    MOVE "XX" TO ACCT-SUB-TYPE
+    PERFORM SETUP-DEPOSIT-TXN
+    INITIALIZE WS-GL-ENTRIES
+    INITIALIZE WS-TXN-RESULT
+    MOVE 250.00 TO TXN-AMOUNT
+    MOVE 250.00 TO TXN-CASH-AMOUNT
+    CALL "TXNPOST0" USING TXN-RECORD ACCT-RECORD
+                          WS-GL-ENTRIES WS-TXN-RESULT
+    IF WS-TXN-RESULT-CODE = "E0000"
+        IF WS-GL-CR-ACCOUNT = 9999
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " CR=" WS-GL-CR-ACCOUNT " expected=9999"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

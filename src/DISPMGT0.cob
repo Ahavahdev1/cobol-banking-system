@@ -148,8 +148,20 @@ DO-PROVISIONAL-CREDIT.
 
     *> Credit account
     ADD DSP-PROVISIONAL-AMT TO ACCT-LEDGER-BAL
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-DSP-RESULT-CODE
+            MOVE "Arithmetic overflow on provisional credit"
+                TO LS-DSP-RESULT-MSG
+            GOBACK
+    END-ADD
     COMPUTE ACCT-AVAIL-BAL =
         ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-DSP-RESULT-CODE
+            MOVE "Arithmetic overflow on available balance"
+                TO LS-DSP-RESULT-MSG
+            GOBACK
+    END-COMPUTE
 
     MOVE "E0000" TO LS-DSP-RESULT-CODE
     MOVE "Provisional credit issued" TO LS-DSP-RESULT-MSG.
@@ -180,8 +192,20 @@ DO-RESOLVE-DISPUTE.
             *> Denied: reverse provisional credit
             IF DSP-PROVISIONAL-AMT > 0
                 SUBTRACT DSP-PROVISIONAL-AMT FROM ACCT-LEDGER-BAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-DSP-RESULT-CODE
+                        MOVE "Arithmetic overflow on credit reversal"
+                            TO LS-DSP-RESULT-MSG
+                        GOBACK
+                END-SUBTRACT
                 COMPUTE ACCT-AVAIL-BAL =
                     ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-DSP-RESULT-CODE
+                        MOVE "Arithmetic overflow on available balance"
+                            TO LS-DSP-RESULT-MSG
+                        GOBACK
+                END-COMPUTE
             END-IF
             MOVE "D" TO DSP-STATUS
         WHEN "PA"
@@ -192,8 +216,20 @@ DO-RESOLVE-DISPUTE.
                 COMPUTE WS-REVERSE-AMT =
                     DSP-PROVISIONAL-AMT - DSP-TXN-AMOUNT
                 SUBTRACT WS-REVERSE-AMT FROM ACCT-LEDGER-BAL
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-DSP-RESULT-CODE
+                        MOVE "Arithmetic overflow on partial reversal"
+                            TO LS-DSP-RESULT-MSG
+                        GOBACK
+                END-SUBTRACT
                 COMPUTE ACCT-AVAIL-BAL =
                     ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+                    ON SIZE ERROR
+                        MOVE "E0040" TO LS-DSP-RESULT-CODE
+                        MOVE "Arithmetic overflow on available balance"
+                            TO LS-DSP-RESULT-MSG
+                        GOBACK
+                END-COMPUTE
             END-IF
             MOVE "R" TO DSP-STATUS
         WHEN OTHER

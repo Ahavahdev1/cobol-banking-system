@@ -263,6 +263,9 @@ EOD-RELEASE-HOLDS.
         SUBTRACT ACCT-HOLD-AMOUNT FROM ACCT-HOLD-AMOUNT
         COMPUTE ACCT-AVAIL-BAL =
             ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+            ON SIZE ERROR
+                ADD 1 TO WS-ACCTS-ERRORS
+        END-COMPUTE
         ADD 1 TO WS-HOLDS-RELEASED
     END-IF
     *> Reset daily NSF counter for next business day

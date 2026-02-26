@@ -2,8 +2,9 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-BSAAML.
 *> ================================================================
 *> TEST-BSAAML - Test suite for BSACTRO BSA/AML CTR Generator
-*> Tests: CTR threshold, aggregation, exemptions, cash direction
-*> 9 tests (BA-001 to BA-009)
+*> Tests: CTR threshold, aggregation, exemptions, cash direction,
+*> structuring boundary detection
+*> 12 tests (BA-001 to BA-012)
 *> ================================================================
 
 DATA DIVISION.
@@ -48,6 +49,9 @@ MAIN-PROGRAM.
     PERFORM TEST-BA-007
     PERFORM TEST-BA-008
     PERFORM TEST-BA-009
+    PERFORM TEST-BA-010
+    PERFORM TEST-BA-011
+    PERFORM TEST-BA-012
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -422,4 +426,82 @@ TEST-BA-009.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " rc=" WS-BSA-RESULT-CODE " expected=E0001"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-010: STRC - combined cash $8000 exactly, 2 txns -> E0082
+*> ---------------------------------------------------------------
+TEST-BA-010.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-010: Struct $8K 2txns -> E0082" TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "STRC" TO WS-FUNCTION
+    MOVE 5000.00 TO CTR-CASH-IN-TOTAL
+    MOVE 3000.00 TO CTR-CASH-OUT-TOTAL
+    MOVE 1 TO CTR-CASH-IN-COUNT
+    MOVE 1 TO CTR-CASH-OUT-COUNT
+    MOVE "N" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0082"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE " expected=E0082"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-011: STRC - combined $7999.99, 2 txns -> E0000 (below range)
+*> ---------------------------------------------------------------
+TEST-BA-011.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-011: Struct $7999.99 -> E0000" TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "STRC" TO WS-FUNCTION
+    MOVE 5000.00 TO CTR-CASH-IN-TOTAL
+    MOVE 2999.99 TO CTR-CASH-OUT-TOTAL
+    MOVE 1 TO CTR-CASH-IN-COUNT
+    MOVE 1 TO CTR-CASH-OUT-COUNT
+    MOVE "N" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE " expected=E0000"
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> BA-012: STRC - $9000 single txn -> E0000 (count must be > 1)
+*> ---------------------------------------------------------------
+TEST-BA-012.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "BA-012: Struct $9K 1txn -> E0000" TO WS-TEST-NAME
+    INITIALIZE CTR-RECORD
+    INITIALIZE WS-TXN-INFO
+    INITIALIZE WS-BSA-RESULT
+    MOVE "STRC" TO WS-FUNCTION
+    MOVE 9000.00 TO CTR-CASH-IN-TOTAL
+    MOVE 0 TO CTR-CASH-OUT-TOTAL
+    MOVE 1 TO CTR-CASH-IN-COUNT
+    MOVE 0 TO CTR-CASH-OUT-COUNT
+    MOVE "N" TO CTR-EXEMPT-FLAG
+    CALL "BSACTRO" USING WS-FUNCTION CTR-RECORD
+                         WS-TXN-INFO WS-BSA-RESULT
+    IF WS-BSA-RESULT-CODE = "E0000"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BSA-RESULT-CODE " expected=E0000"
     END-IF.

@@ -2,7 +2,7 @@ IDENTIFICATION DIVISION.
 PROGRAM-ID. TEST-ACCTMGMT.
 *> ================================================================
 *> TEST-ACCTMGMT - Test suite for ACCTMGMT account management
-*> Tests: OPEN, CLOS, CHKD functions (16 tests)
+*> Tests: OPEN, CLOS, CHKD functions (17 tests)
 *> ================================================================
 
 DATA DIVISION.
@@ -42,6 +42,7 @@ MAIN-PROGRAM.
     PERFORM TEST-AM-014
     PERFORM TEST-AM-015
     PERFORM TEST-AM-016
+    PERFORM TEST-AM-017
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -510,4 +511,33 @@ TEST-AM-016.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-ACCT-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> AM-017: CLOS with pending debit -> E0017
+*> ---------------------------------------------------------------
+TEST-AM-017.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "AM-017: CLOS pending DR=E0017" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-ACCT-RESULT
+    PERFORM SETUP-VALID-CIF
+    MOVE "CLOS" TO WS-FUNCTION
+    MOVE "A" TO ACCT-STATUS
+    MOVE 0 TO ACCT-LEDGER-BAL
+    MOVE 0 TO ACCT-HOLD-AMOUNT
+    MOVE 100.00 TO ACCT-PENDING-DR
+    MOVE 0 TO ACCT-PENDING-CR
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "D" TO ACCT-TYPE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    CALL "ACCTMGMT" USING WS-FUNCTION ACCT-RECORD
+                          CIF-RECORD WS-ACCT-RESULT
+    IF WS-ACCT-RESULT-CODE = "E0017"
+        ADD 1 TO WS-PASS-COUNT
+        DISPLAY "  PASS: " WS-TEST-NAME
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " expected=E0017 actual=" WS-ACCT-RESULT-CODE
     END-IF.

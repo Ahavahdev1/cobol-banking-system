@@ -17,6 +17,9 @@ WORKING-STORAGE SECTION.
 01  WS-NEXT-PMT-DD             PIC 9(2).
 01  WS-NEXT-PMT-WORK           PIC 9(8).
 01  WS-DAYS-LATE               PIC 9(4).
+01  WS-LEAP-YEAR-REM4          PIC 9(4).
+01  WS-LEAP-YEAR-REM100        PIC 9(4).
+01  WS-LEAP-YEAR-REM400        PIC 9(4).
 
 LINKAGE SECTION.
 01  LS-LOAN-FUNCTION           PIC X(4).
@@ -89,15 +92,33 @@ PROCESS-PAYMENT.
         MOVE ZERO TO WS-PRIN-PORTION
         *> Reduce accrued interest by payment
         SUBTRACT LS-PAYMENT-AMT FROM ACCT-ACCRUED-INT
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Arithmetic overflow on interest reduction"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
     ELSE
         *> Pay all accrued interest first, rest to principal
         MOVE WS-ACCRUED-INT-2DP TO WS-INT-PORTION
         COMPUTE WS-PRIN-PORTION =
             LS-PAYMENT-AMT - WS-ACCRUED-INT-2DP
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Arithmetic overflow on principal calc"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-COMPUTE
         *> Clear accrued interest
         MOVE ZERO TO ACCT-ACCRUED-INT
         *> Reduce loan balance by principal portion
         SUBTRACT WS-PRIN-PORTION FROM ACCT-LEDGER-BAL
+            ON SIZE ERROR
+                MOVE "E0040" TO LS-LOAN-RESULT-CODE
+                MOVE "Arithmetic overflow on loan payment"
+                    TO LS-LOAN-RESULT-MSG
+                GOBACK
+        END-SUBTRACT
         *> Don't let balance go negative
         IF ACCT-LEDGER-BAL < ZERO
             MOVE ZERO TO ACCT-LEDGER-BAL
@@ -119,6 +140,35 @@ PROCESS-PAYMENT.
         IF WS-NEXT-PMT-MM > 12
             MOVE 1 TO WS-NEXT-PMT-MM
             ADD 1 TO WS-NEXT-PMT-YYYY
+        END-IF
+        *> Cap day for shorter months to avoid invalid dates
+        IF WS-NEXT-PMT-DD > 28
+            EVALUATE WS-NEXT-PMT-MM
+                WHEN 2
+                    DIVIDE WS-NEXT-PMT-YYYY BY 4
+                        GIVING WS-LEAP-YEAR-REM4
+                        REMAINDER WS-LEAP-YEAR-REM4
+                    DIVIDE WS-NEXT-PMT-YYYY BY 100
+                        GIVING WS-LEAP-YEAR-REM100
+                        REMAINDER WS-LEAP-YEAR-REM100
+                    DIVIDE WS-NEXT-PMT-YYYY BY 400
+                        GIVING WS-LEAP-YEAR-REM400
+                        REMAINDER WS-LEAP-YEAR-REM400
+                    IF WS-LEAP-YEAR-REM4 = 0
+                        AND (WS-LEAP-YEAR-REM100 NOT = 0
+                             OR WS-LEAP-YEAR-REM400 = 0)
+                        MOVE 29 TO WS-NEXT-PMT-DD
+                    ELSE
+                        MOVE 28 TO WS-NEXT-PMT-DD
+                    END-IF
+                WHEN 4
+                WHEN 6
+                WHEN 9
+                WHEN 11
+                    IF WS-NEXT-PMT-DD > 30
+                        MOVE 30 TO WS-NEXT-PMT-DD
+                    END-IF
+            END-EVALUATE
         END-IF
         COMPUTE ACCT-NEXT-PMT-DATE =
             WS-NEXT-PMT-YYYY * 10000
@@ -150,9 +200,10 @@ CHECK-LATE.
     END-IF
     IF ACCT-NEXT-PMT-DATE > 0
         AND LS-PAYMENT-DATE > ACCT-NEXT-PMT-DATE
-        *> Payment is past due - compute simplified days late
+        *> Payment is past due - compute actual days late
         COMPUTE WS-DAYS-LATE =
-            LS-PAYMENT-DATE - ACCT-NEXT-PMT-DATE
+            FUNCTION INTEGER-OF-DATE(LS-PAYMENT-DATE)
+          - FUNCTION INTEGER-OF-DATE(ACCT-NEXT-PMT-DATE)
         MOVE WS-DAYS-LATE TO ACCT-PAST-DUE-DAYS
         MOVE ACCT-PAYMENT-AMT TO ACCT-PAST-DUE-AMT
         *> Assess late fee if not already assessed
@@ -175,6 +226,12 @@ CALC-PAYOFF.
     MOVE ACCT-ACCRUED-INT TO WS-ACCRUED-INT-2DP
     COMPUTE WS-PAYOFF-AMT =
         ACCT-LEDGER-BAL + WS-ACCRUED-INT-2DP
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-LOAN-RESULT-CODE
+            MOVE "Arithmetic overflow on payoff calc"
+                TO LS-LOAN-RESULT-MSG
+            GOBACK
+    END-COMPUTE
     MOVE WS-PAYOFF-AMT TO LS-LOAN-NEW-BALANCE
     MOVE "E0000" TO LS-LOAN-RESULT-CODE
     MOVE "Payoff amount calculated" TO LS-LOAN-RESULT-MSG.

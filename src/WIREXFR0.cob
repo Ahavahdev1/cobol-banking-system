@@ -70,6 +70,16 @@ PROCESS-SEND.
         MOVE "Account is frozen" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-WIRE-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-LEGAL-HOLD = "Y"
+        MOVE "E0035" TO LS-WIRE-RESULT-CODE
+        MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
 
     *> Validate sufficient funds
     IF WIRE-AMOUNT > ACCT-AVAIL-BAL
@@ -150,6 +160,16 @@ PROCESS-RECV.
     IF ACCT-STATUS = "F"
         MOVE "E0012" TO LS-WIRE-RESULT-CODE
         MOVE "Account is frozen" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-DECEASED = "Y"
+        MOVE "E0036" TO LS-WIRE-RESULT-CODE
+        MOVE "Account holder is deceased" TO LS-WIRE-RESULT-MSG
+        GOBACK
+    END-IF
+    IF ACCT-LEGAL-HOLD = "Y"
+        MOVE "E0035" TO LS-WIRE-RESULT-CODE
+        MOVE "Account has legal hold" TO LS-WIRE-RESULT-MSG
         GOBACK
     END-IF
 

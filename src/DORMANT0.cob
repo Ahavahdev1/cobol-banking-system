@@ -16,6 +16,8 @@ WORKING-STORAGE SECTION.
 01  WS-TXN-MONTH               PIC 9(2).
 01  WS-TXN-DAY                 PIC 9(2).
 01  WS-DATE-DIFF               PIC S9(9).
+01  WS-BATCH-INT-DATE           PIC 9(8).
+01  WS-LAST-TXN-INT-DATE        PIC 9(8).
 
 LINKAGE SECTION.
 01  LS-DORM-FUNCTION            PIC X(4).
@@ -70,12 +72,12 @@ CHECK-DORMANCY.
         EXIT PARAGRAPH
     END-IF
 
-    *> Calculate date difference (YYYYMMDD subtraction)
-    *> A difference >= 10000 means at least 1 year has passed
+    *> Calculate date difference using intrinsic day counts
     COMPUTE WS-DATE-DIFF =
-        LS-BATCH-DATE - ACCT-LAST-TXN-DATE
+        FUNCTION INTEGER-OF-DATE(LS-BATCH-DATE)
+      - FUNCTION INTEGER-OF-DATE(ACCT-LAST-TXN-DATE)
 
-    IF WS-DATE-DIFF > 10000
+    IF WS-DATE-DIFF > 365
         MOVE "D" TO ACCT-STATUS
         MOVE "D" TO LS-DORM-ACTION-TAKEN
         MOVE "Account marked dormant - inactive > 1 year"
@@ -105,12 +107,12 @@ CHECK-ESCHEATMENT.
         EXIT PARAGRAPH
     END-IF
 
-    *> Calculate date difference
-    *> A difference >= 30000 means at least 3 years
+    *> Calculate date difference using intrinsic day counts
     COMPUTE WS-DATE-DIFF =
-        LS-BATCH-DATE - ACCT-LAST-TXN-DATE
+        FUNCTION INTEGER-OF-DATE(LS-BATCH-DATE)
+      - FUNCTION INTEGER-OF-DATE(ACCT-LAST-TXN-DATE)
 
-    IF WS-DATE-DIFF > 30000
+    IF WS-DATE-DIFF > 1095
         MOVE "E" TO ACCT-STATUS
         MOVE "E" TO LS-DORM-ACTION-TAKEN
         MOVE "Account escheated - dormant > 3 years"

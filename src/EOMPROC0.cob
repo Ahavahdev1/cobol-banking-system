@@ -41,6 +41,10 @@ COPY CPYAUDT.
 
 *> Statement date calculation
 01  WS-NEXT-STMT-DATE          PIC 9(8).
+01  WS-NEXT-STMT-PARTS REDEFINES WS-NEXT-STMT-DATE.
+    05  WS-STMT-YYYY            PIC 9(4).
+    05  WS-STMT-MM              PIC 9(2).
+    05  WS-STMT-DD              PIC 9(2).
 
 *> Batch counters
 01  WS-ACCTS-PROCESSED       PIC 9(8) VALUE 0.
@@ -201,7 +205,11 @@ EOM-LOG-AUDIT.
 *> ---------------------------------------------------------------
 EOM-UPDATE-STMT-DATES.
     MOVE LS-BATCH-DATE TO ACCT-LAST-STMT-DATE
-    *> Set next statement date to approximately 1 month later
-    *> (simplified: add 100 to YYYYMMDD date for next month)
-    ADD 100 TO LS-BATCH-DATE GIVING WS-NEXT-STMT-DATE
+    *> Set next statement date to 1 month later with rollover
+    MOVE LS-BATCH-DATE TO WS-NEXT-STMT-DATE
+    ADD 1 TO WS-STMT-MM
+    IF WS-STMT-MM > 12
+        MOVE 1 TO WS-STMT-MM
+        ADD 1 TO WS-STMT-YYYY
+    END-IF
     MOVE WS-NEXT-STMT-DATE TO ACCT-NEXT-STMT-DATE.

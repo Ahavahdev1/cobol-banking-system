@@ -231,6 +231,10 @@ MAP-GL-ENTRIES.
                 MOVE 0000001010 TO LS-GL-DR-ACCOUNT
                 MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
             END-IF
+        WHEN OTHER
+            *> Unknown type: use deposit GL for both sides (suspense)
+            MOVE WS-DEPOSIT-GL TO LS-GL-DR-ACCOUNT
+            MOVE WS-DEPOSIT-GL TO LS-GL-CR-ACCOUNT
     END-EVALUATE
     MOVE TXN-AMOUNT TO LS-GL-AMOUNT
     MOVE "Y" TO LS-GL-POST-FLAG.
@@ -248,6 +252,8 @@ DETERMINE-DEPOSIT-GL.
             MOVE 0000004040 TO WS-DEPOSIT-GL
         WHEN "CD"
             MOVE 0000004050 TO WS-DEPOSIT-GL
+        WHEN OTHER
+            MOVE 0000009999 TO WS-DEPOSIT-GL
     END-EVALUATE.
 
 *> ---------------------------------------------------------------
