@@ -60,6 +60,7 @@ MAIN-PROGRAM.
     PERFORM TEST-OD-022
     PERFORM TEST-OD-023
     PERFORM TEST-OD-024
+    PERFORM TEST-OD-025
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1011,4 +1012,53 @@ TEST-OD-024.
             " rc=" WS-OD-RESULT-CODE
             " expected=E0043 nsf-today="
             ACCT-NSF-COUNT-TODAY
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> OD-025: NSF fee added to ACCT-YTD-FEES-CHARGED
+*> When OD fee is assessed, YTD fees must be incremented
+*> ---------------------------------------------------------------
+TEST-OD-025.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "OD-025: NSF fee added to YTD-FEES" TO WS-TEST-NAME
+    INITIALIZE ACCT-RECORD
+    INITIALIZE WS-OD-REQUEST
+    INITIALIZE WS-OD-RESULT
+    MOVE "A" TO ACCT-STATUS
+    MOVE "D" TO ACCT-TYPE
+    MOVE "DDA1" TO ACCT-PRODUCT-CODE
+    MOVE "CH" TO ACCT-SUB-TYPE
+    MOVE 100.00 TO ACCT-LEDGER-BAL
+    MOVE 100.00 TO ACCT-AVAIL-BAL
+    MOVE "Y" TO ACCT-OD-OPTED-IN
+    MOVE 500.00 TO ACCT-OD-LIMIT
+    MOVE "N" TO ACCT-OD-PROTECTION
+    MOVE 0 TO ACCT-NSF-COUNT-TODAY
+    MOVE 0 TO ACCT-NSF-COUNT-MTD
+    MOVE 0 TO ACCT-NSF-COUNT-YTD
+    MOVE 0 TO ACCT-YTD-FEES-CHARGED
+    MOVE "N" TO ACCT-DECEASED
+    MOVE "N" TO ACCT-LEGAL-HOLD
+    MOVE "N" TO ACCT-GARNISHMENT
+    MOVE 150.00 TO WS-OD-TXN-AMOUNT
+    MOVE "CK" TO WS-OD-TXN-CHANNEL
+    MOVE "WDL" TO WS-OD-TXN-TYPE
+    MOVE 20260226 TO WS-OD-CURRENT-DATE
+    CALL "ODMGMT0" USING ACCT-RECORD WS-OD-REQUEST WS-OD-RESULT
+    *> OD amount = 150 - 100 = 50 > $5 de minimis, fee = $36
+    IF WS-OD-RESULT-CODE = "E0000"
+        IF ACCT-YTD-FEES-CHARGED = 36.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " expected=36.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-OD-RESULT-CODE
     END-IF.

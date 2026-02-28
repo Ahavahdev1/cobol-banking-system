@@ -1316,13 +1316,13 @@ TEST-WR-027.
     END-IF.
 
 *> ---------------------------------------------------------------
-*> WR-028: RVRS incoming wire with insufficient funds -> E0003
+*> WR-028: RVRS incoming wire with insufficient funds -> E0097
 *>         Reversing an incoming wire debits the account;
 *>         if available balance < wire amount, should fail
 *> ---------------------------------------------------------------
 TEST-WR-028.
     ADD 1 TO WS-TEST-COUNT
-    MOVE "WR-028: RVRS incoming insuff funds -> E0003"
+    MOVE "WR-028: RVRS incoming insuff funds -> E0097"
         TO WS-TEST-NAME
     INITIALIZE WS-WIRE-RECORD
     INITIALIZE WS-ACCT-RECORD
@@ -1347,14 +1347,14 @@ TEST-WR-028.
                           WS-WIRE-RECORD
                           WS-ACCT-RECORD
                           WS-WIRE-RESULT
-    IF WS-WIRE-RESULT-CODE = "E0003"
+    IF WS-WIRE-RESULT-CODE = "E0097"
         ADD 1 TO WS-PASS-COUNT
         DISPLAY "  PASS: " WS-TEST-NAME
     ELSE
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " result=" WS-WIRE-RESULT-CODE
-            " expected=E0003"
+            " expected=E0097"
     END-IF.
 
 *> ---------------------------------------------------------------

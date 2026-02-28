@@ -52,6 +52,7 @@ MAIN-PROGRAM.
     PERFORM TEST-EM-020
     PERFORM TEST-EM-021
     PERFORM TEST-EM-022
+    PERFORM TEST-EM-023
 
     DISPLAY "========================================".
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -860,6 +861,49 @@ TEST-EM-022.
                 " ytd-fees=" ACCT-YTD-FEES-CHARGED
                 " nsf-mtd=" ACCT-NSF-COUNT-MTD
                 " bal=" ACCT-LEDGER-BAL
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-BATCH-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> EM-023: DD waiver code -> fee waived through EOM batch
+*> EOMPROC0 must set FEE-DD-WAIVER=Y so FEECALC0 waives the fee
+*> ---------------------------------------------------------------
+TEST-EM-023.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "EM-023: DD waiver via EOM -> fee waived"
+        TO WS-TEST-NAME
+    PERFORM SETUP-EOM-ACCOUNT
+    MOVE "DD" TO ACCT-FEE-WAIVER-CODE
+    MOVE 12.00 TO ACCT-MONTHLY-FEE
+    MOVE 500.00 TO ACCT-LEDGER-BAL
+    MOVE 500.00 TO ACCT-AVAIL-BAL
+    MOVE 0 TO ACCT-YTD-FEES-CHARGED
+    MOVE 0 TO ACCT-YTD-FEES-WAIVED
+    INITIALIZE BATCH-RECORD
+    INITIALIZE WS-BATCH-RESULT
+    MOVE 20260630 TO WS-BATCH-DATE
+    CALL "EOMPROC0" USING WS-BATCH-DATE
+                          ACCT-RECORD
+                          BATCH-RECORD
+                          WS-BATCH-RESULT
+    *> Fee should be waived, balance unchanged
+    IF WS-BATCH-RESULT-CODE = "E0000"
+        IF ACCT-LEDGER-BAL = 500.00
+            AND ACCT-YTD-FEES-CHARGED = 0
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " bal=" ACCT-LEDGER-BAL
+                " ytd-fees=" ACCT-YTD-FEES-CHARGED
+                " expected bal=500 fees=0"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT

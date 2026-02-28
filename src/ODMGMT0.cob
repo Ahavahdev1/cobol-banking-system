@@ -176,6 +176,9 @@ ODMGMT0-MAIN.
                 ADD 1 TO ACCT-NSF-COUNT-YTD
                     ON SIZE ERROR CONTINUE
                 END-ADD
+                ADD WS-NSF-FEE-AMOUNT TO ACCT-YTD-FEES-CHARGED
+                    ON SIZE ERROR CONTINUE
+                END-ADD
             END-IF
         END-IF
     END-IF

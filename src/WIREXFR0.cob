@@ -358,7 +358,7 @@ PROCESS-REVERSE.
     *> If incoming wire was credited, subtract from balance
     IF WIRE-TYPE = "I"
         IF WIRE-AMOUNT > ACCT-AVAIL-BAL
-            MOVE "E0003" TO LS-WIRE-RESULT-CODE
+            MOVE "E0097" TO LS-WIRE-RESULT-CODE
             MOVE "Insufficient funds for wire reversal"
                 TO LS-WIRE-RESULT-MSG
             GOBACK
@@ -380,6 +380,10 @@ PROCESS-REVERSE.
                     TO LS-WIRE-RESULT-MSG
                 GOBACK
         END-COMPUTE
+        *> Track MTD low balance after reversal debit
+        IF ACCT-LEDGER-BAL < ACCT-MTD-LOW-BAL
+            MOVE ACCT-LEDGER-BAL TO ACCT-MTD-LOW-BAL
+        END-IF
     ELSE IF WIRE-TYPE = "O"
         MOVE ACCT-LEDGER-BAL TO WS-SAVE-LEDGER-BAL
         ADD WIRE-AMOUNT TO ACCT-LEDGER-BAL

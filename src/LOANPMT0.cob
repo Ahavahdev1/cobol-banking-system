@@ -117,6 +117,10 @@ PROCESS-PAYMENT.
                     TO LS-LOAN-RESULT-MSG
                 GOBACK
         END-SUBTRACT
+        *> Cap at zero — rounding 6dp to 2dp can overshoot
+        IF ACCT-ACCRUED-INT < ZERO
+            MOVE ZERO TO ACCT-ACCRUED-INT
+        END-IF
     ELSE
         *> Pay all accrued interest first, rest to principal
         MOVE WS-ACCRUED-INT-2DP TO WS-INT-PORTION
@@ -142,6 +146,19 @@ PROCESS-PAYMENT.
                     TO LS-LOAN-RESULT-MSG
                 GOBACK
         END-SUBTRACT
+    END-IF
+    *> Update available balance for consistency
+    COMPUTE ACCT-AVAIL-BAL =
+        ACCT-LEDGER-BAL - ACCT-HOLD-AMOUNT
+        ON SIZE ERROR
+            MOVE "E0040" TO LS-LOAN-RESULT-CODE
+            MOVE "Overflow on available balance update"
+                TO LS-LOAN-RESULT-MSG
+            GOBACK
+    END-COMPUTE
+    *> Track MTD low balance after payment
+    IF ACCT-LEDGER-BAL < ACCT-MTD-LOW-BAL
+        MOVE ACCT-LEDGER-BAL TO ACCT-MTD-LOW-BAL
     END-IF
     *> Update past due status
     IF LS-PAYMENT-AMT >= ACCT-PAST-DUE-AMT
@@ -174,15 +191,12 @@ PROCESS-PAYMENT.
         IF WS-NEXT-PMT-DD > 28
             EVALUATE WS-NEXT-PMT-MM
                 WHEN 2
-                    DIVIDE WS-NEXT-PMT-YYYY BY 4
-                        GIVING WS-LEAP-YEAR-REM4
-                        REMAINDER WS-LEAP-YEAR-REM4
-                    DIVIDE WS-NEXT-PMT-YYYY BY 100
-                        GIVING WS-LEAP-YEAR-REM100
-                        REMAINDER WS-LEAP-YEAR-REM100
-                    DIVIDE WS-NEXT-PMT-YYYY BY 400
-                        GIVING WS-LEAP-YEAR-REM400
-                        REMAINDER WS-LEAP-YEAR-REM400
+                    COMPUTE WS-LEAP-YEAR-REM4 =
+                        FUNCTION MOD(WS-NEXT-PMT-YYYY 4)
+                    COMPUTE WS-LEAP-YEAR-REM100 =
+                        FUNCTION MOD(WS-NEXT-PMT-YYYY 100)
+                    COMPUTE WS-LEAP-YEAR-REM400 =
+                        FUNCTION MOD(WS-NEXT-PMT-YYYY 400)
                     IF WS-LEAP-YEAR-REM4 = 0
                         AND (WS-LEAP-YEAR-REM100 NOT = 0
                              OR WS-LEAP-YEAR-REM400 = 0)

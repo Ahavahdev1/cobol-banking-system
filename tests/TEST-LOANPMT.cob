@@ -67,6 +67,9 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-043
     PERFORM TEST-LP-044
     PERFORM TEST-LP-045
+    PERFORM TEST-LP-046
+    PERFORM TEST-LP-047
+    PERFORM TEST-LP-048
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1263,4 +1266,112 @@ TEST-LP-045.
         ADD 1 TO WS-FAIL-COUNT
         DISPLAY "  FAIL: " WS-TEST-NAME
             " expected=E0012 actual=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-046: Rounding overshoot — accrued int stays >= 0
+*> When 6dp accrued int rounds UP to 2dp, paying the rounded
+*> amount should cap accrued interest at 0, not go negative.
+*> ---------------------------------------------------------------
+TEST-LP-046.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-046: Rounding overshoot caps at zero"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    *> 100.005000 rounds to 100.01 at 2dp
+    MOVE 100.005000 TO ACCT-ACCRUED-INT
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    *> Pay exactly the rounded amount
+    MOVE 100.01 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-ACCRUED-INT >= ZERO
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " accrued=" ACCT-ACCRUED-INT
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " accrued=" ACCT-ACCRUED-INT
+                " expected>=0"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-047: AVAIL-BAL updated after loan payment
+*> Loan with hold amount — AVAIL-BAL must reflect new ledger bal
+*> ---------------------------------------------------------------
+TEST-LP-047.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-047: AVAIL-BAL updated after payment"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE 200.00 TO ACCT-HOLD-AMOUNT
+    MOVE 9800.00 TO ACCT-AVAIL-BAL
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    *> int=100, prin=400, new bal=9600, avail=9600-200=9400
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-AVAIL-BAL = 9400.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " avail=" ACCT-AVAIL-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " avail=" ACCT-AVAIL-BAL
+                " expected=9400.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-048: MTD-Low-Bal tracked after loan payment
+*> Payment reduces balance below MTD low — low watermark updates
+*> ---------------------------------------------------------------
+TEST-LP-048.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-048: MTD-Low-Bal tracked after payment"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    MOVE 10000.00 TO ACCT-MTD-LOW-BAL
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    MOVE 500.00 TO WS-PAYMENT-AMT
+    MOVE 20260315 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    *> int=100, prin=400, new bal=9600 < 10000 old MTD low
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-MTD-LOW-BAL = 9600.00
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " mtd-low=" ACCT-MTD-LOW-BAL
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " mtd-low=" ACCT-MTD-LOW-BAL
+                " expected=9600.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
     END-IF.
