@@ -228,8 +228,11 @@ PROCESS-PAYMENT.
     IF ACCT-REMAINING-TERM > 0
         SUBTRACT 1 FROM ACCT-REMAINING-TERM
     END-IF
-    *> Reset late fee flag for next cycle
-    MOVE "N" TO ACCT-LATE-FEE-ASSESSED
+    *> Reset late fee flag only when past-due is fully cleared
+    *> Partial payments must not reset — prevents double-charging
+    IF ACCT-PAST-DUE-AMT = ZERO
+        MOVE "N" TO ACCT-LATE-FEE-ASSESSED
+    END-IF
     *> Update last transaction date for dormancy tracking
     MOVE LS-PAYMENT-DATE TO ACCT-LAST-TXN-DATE
     *> Set result

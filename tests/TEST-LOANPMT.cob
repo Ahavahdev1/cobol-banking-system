@@ -70,6 +70,7 @@ MAIN-PROGRAM.
     PERFORM TEST-LP-046
     PERFORM TEST-LP-047
     PERFORM TEST-LP-048
+    PERFORM TEST-LP-049
 
     DISPLAY "========================================"
     DISPLAY "RESULTS: " WS-PASS-COUNT "/" WS-TEST-COUNT
@@ -1369,6 +1370,45 @@ TEST-LP-048.
             DISPLAY "  FAIL: " WS-TEST-NAME
                 " mtd-low=" ACCT-MTD-LOW-BAL
                 " expected=9600.00"
+        END-IF
+    ELSE
+        ADD 1 TO WS-FAIL-COUNT
+        DISPLAY "  FAIL: " WS-TEST-NAME
+            " rc=" WS-LOAN-RESULT-CODE
+    END-IF.
+
+*> ---------------------------------------------------------------
+*> LP-049: Partial payment does NOT reset late fee flag
+*> A partial payment that doesn't clear past-due should keep
+*> ACCT-LATE-FEE-ASSESSED = "Y" to prevent double-charging.
+*> ---------------------------------------------------------------
+TEST-LP-049.
+    ADD 1 TO WS-TEST-COUNT
+    MOVE "LP-049: Partial pmt keeps late fee flag"
+        TO WS-TEST-NAME
+    PERFORM SETUP-LOAN-ACCOUNT
+    INITIALIZE WS-LOAN-RESULT
+    *> Simulate past-due state: $500 past due, late fee assessed
+    MOVE 500.00 TO ACCT-PAST-DUE-AMT
+    MOVE 30 TO ACCT-PAST-DUE-DAYS
+    MOVE "Y" TO ACCT-LATE-FEE-ASSESSED
+    MOVE "PMNT" TO WS-LOAN-FUNCTION
+    *> Partial payment: $200 < $500 past-due
+    MOVE 200.00 TO WS-PAYMENT-AMT
+    MOVE 20260415 TO WS-PAYMENT-DATE
+    CALL "LOANPMT0" USING WS-LOAN-FUNCTION ACCT-RECORD
+                          WS-PAYMENT-AMT WS-PAYMENT-DATE
+                          WS-LOAN-RESULT
+    IF WS-LOAN-RESULT-CODE = "E0000"
+        IF ACCT-LATE-FEE-ASSESSED = "Y"
+            ADD 1 TO WS-PASS-COUNT
+            DISPLAY "  PASS: " WS-TEST-NAME
+                " flag=" ACCT-LATE-FEE-ASSESSED
+        ELSE
+            ADD 1 TO WS-FAIL-COUNT
+            DISPLAY "  FAIL: " WS-TEST-NAME
+                " flag=" ACCT-LATE-FEE-ASSESSED
+                " expected=Y (not cleared on partial)"
         END-IF
     ELSE
         ADD 1 TO WS-FAIL-COUNT
